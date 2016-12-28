@@ -12,20 +12,25 @@
 #include "ThreadParams.h"
 #include "ContTable.h"
 #include "float.h"
+#include <mpi.h>
 
 class SearchMI : public Search {
 public:
-	SearchMI(Options* options);
-	virtual ~SearchMI();
+    SearchMI(Options *options);
 
-	// Execute the epistasis search
-	void execute();
+    virtual ~SearchMI();
+
+    // Execute the epistasis search
+    void execute();
 
 private:
-	static void* _threadMI(void* arg);
+    static void *_mpiMI(Options *options, vector<ThreadParams *> _threadParams, SNPDistributor *distributor);
 
-	vector<Engine*> _engines;
-	vector<ThreadParams*> _threadParams;
+    static void *_threadMI(void *arg);
+
+    vector<Engine *> _engines;
+    vector<ThreadParams *> _threadParams;
+    SNPDistributor *_distributor;
 };
 
 #endif /* SEARCHMI_H_ */
