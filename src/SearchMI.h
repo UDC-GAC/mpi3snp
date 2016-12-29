@@ -3,6 +3,9 @@
  *
  *  Created on: Sep 5, 2014
  *      Author: gonzales
+ *
+ *  Modified on: December 29, 2016
+ *           by: Christian Ponte Fernández
  */
 
 #ifndef SEARCHMI_H_
@@ -24,13 +27,13 @@ public:
     void execute();
 
 private:
-    static void *_mpiMI(Options *options, vector<ThreadParams *> _threadParams, SNPDistributor *distributor);
+    static void *_mpiMI(Options *options, vector<ThreadParams *> threadParams, vector<SNP *> snpSet,
+                        SNPDistributor::ClassSet_t classSet);
 
     static void *_threadMI(void *arg);
 
     vector<Engine *> _engines;
     vector<ThreadParams *> _threadParams;
-    SNPDistributor *_distributor;
 };
 
 #endif /* SEARCHMI_H_ */

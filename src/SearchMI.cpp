@@ -3,6 +3,9 @@
  *
  *  Created on: Sep 5, 2014
  *      Author: gonzales
+ *
+ *  Modified on: December 29, 2016
+ *           by: Christian Ponte Fernández
  */
 
 #include "SearchMI.h"
@@ -10,7 +13,6 @@
 SearchMI::SearchMI(Options *options) : Search(options) {
     _engines.resize(options->getNumCPUs());
     _threadParams.resize(options->getNumCPUs());
-    _distributor = new SNPDistributor(options);
 
     for (int tid = 0; tid < options->getNumCPUs(); ++tid) {
         _engines[tid] = new Engine(options);
@@ -27,45 +29,51 @@ SearchMI::~SearchMI() {
 
     _engines.clear();
     _threadParams.clear();
-    delete _distributor;
 }
 
 void SearchMI::execute() {
+    // Obtain the whole SNPSet on all processes
+    SNPDistributor *distributor = new SNPDistributor(_options);
+    vector<SNP *> snpSet = distributor->getSnpSet();
+    SNPDistributor::ClassSet_t classSet = distributor->getClassSet();
+    delete distributor;
+
     MPI_Init(NULL, NULL);
 
-    _mpiMI(_options, _threadParams, _distributor);
+    _mpiMI(_options, _threadParams, snpSet, classSet);
 
     MPI_Finalize();
 }
 
-void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, SNPDistributor *distributor) {
+void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, vector<SNP *> snpSet,
+                       SNPDistributor::ClassSet_t classSet) {
     double stime = Utils::getSysTime();
     double etime;
 
-    int MPIRank;
+    int MPIRank, MPISize;
     MPI_Comm_rank(MPI_COMM_WORLD, &MPIRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
 
-    if (MPIRank == 0) { // Master
-        int MPISize;
-        MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
-
-        // The master process reads the SNP's from the file
-        distributor->loadSNPSet();
-        vector<SNP*> SNPSet = distributor->getSnpSet();
-        bool *SNPClasses = distributor->getSnpClasses();
-        uint32_t numSNP = distributor->getNumSnp();
-
-        for (int i=0; i<MPISize; i++){
-            // TODO
-            // MPI_Send SNPSet and SNPClasses to each process
-        }
-
-        etime = Utils::getSysTime();
-        Utils::log("Loaded %ld SNPs in %.2f seconds\n", numSNP, etime - stime);
+    // Calculate lower and upper SNP index for each process
+    uint32_t tuplesPerProc, n, k, sum;
+    n = snpSet.size();
+    tuplesPerProc = (n - 1) * n / (2 * MPISize);
+    sum = 0;
+    k = n;
+    for (int procId=0; procId<=MPIRank; procId++){
+        sum += n - k;
+        n = k;
+        k = (1 + sqrt(1+4*(n*n - n - 2*tuplesPerProc))) / 2;
+    }
+    if (MPIRank == MPISize-1){
+        k = 0;
     }
 
-    // TODO
-    // MPI_Recv SNPSet and SNPClasses from master
+    // Create one SNPDistributor per process
+    SNPDistributor *distributor = new SNPDistributor(options, snpSet, classSet, sum, sum+n-k);
+
+    etime = Utils::getSysTime();
+    Utils::log("Process %i loaded %ld SNPs in %.2f seconds, computing %i SNPs\n", MPIRank, snpSet.size(), etime - stime, n-k);
 
     vector<pthread_t> threadIDs(options->getNumCPUs(), 0);
 
