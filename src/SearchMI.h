@@ -27,6 +27,8 @@ public:
     void execute();
 
 private:
+    static int MPI_TAG_OUTPUT = 1;
+
     static void *_mpiMI(Options *options, vector<ThreadParams *> threadParams, vector<SNP *> snpSet,
                         SNPDistributor::ClassSet_t classSet);
 

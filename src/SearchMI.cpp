@@ -60,20 +60,22 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, ve
     tuplesPerProc = (n - 1) * n / (2 * MPISize);
     sum = 0;
     k = n;
-    for (int procId=0; procId<=MPIRank; procId++){
+    for (int procId = 0; procId <= MPIRank; procId++) {
         sum += n - k;
         n = k;
-        k = (1 + sqrt(1+4*(n*n - n - 2*tuplesPerProc))) / 2;
+        k = (1 + sqrt(1 + 4 * (n * n - n - 2 * tuplesPerProc))) / 2;
     }
-    if (MPIRank == MPISize-1){
+    if (MPIRank == MPISize - 1) {
         k = 0;
     }
 
     // Create one SNPDistributor per process
-    SNPDistributor *distributor = new SNPDistributor(options, snpSet, classSet, sum, sum+n-k);
+    SNPDistributor *distributor = new SNPDistributor(options, snpSet, classSet, sum, sum + n - k);
 
     etime = Utils::getSysTime();
-    Utils::log("Process %i loaded %ld SNPs in %.2f seconds, computing %i SNPs\n", MPIRank, snpSet.size(), etime - stime, n-k);
+    Utils::log("Process %i: loaded %ld SNPs in %.2f seconds, computing %i SNPs\n", MPIRank, snpSet.size(),
+               etime - stime,
+               n - k);
 
     vector<pthread_t> threadIDs(options->getNumCPUs(), 0);
 
@@ -88,7 +90,12 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, ve
         }
     }
 
-    MutualInfo *auxMutualInfo = new MutualInfo[options->getNumCPUs() * options->getNumOutputs()];
+    MutualInfo *auxMutualInfo;
+    if (MPIRank == 0) { // Master
+        auxMutualInfo = new MutualInfo[MPISize * options->getNumCPUs() * options->getNumOutputs()];
+    } else {
+        auxMutualInfo = new MutualInfo[options->getNumCPUs() * options->getNumOutputs()];
+    }
 
     // Wait for the completion of all threads
     for (int tid = 0; tid < options->getNumCPUs(); tid++) {
@@ -97,12 +104,24 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, ve
                options->getNumOutputs() * sizeof(MutualInfo));
     }
 
-    // Sort the auxiliar array and print the results
-    std::sort(auxMutualInfo, auxMutualInfo + options->getNumOutputs() * options->getNumCPUs());
-    distributor->printMI(auxMutualInfo + options->getNumOutputs() * (options->getNumCPUs() - 1),
-                         options->getNumOutputs());
+    // Gather all the results on the master process and print output
+    if (MPIRank == 0) {
+        for (int rank = 1; rank <= MPISize; rank++) {
+            MPI_Recv(&auxMutualInfo[rank * options->getNumCPUs() * options->getNumOutputs()],
+                     options->getNumCPUs() * options->getNumOutputs(), MPI_INT, rank, MPI_TAG_OUTPUT, MPI_COMM_WORLD,
+                     NULL);
+        }
 
-    Utils::log("3-SNP analysis finalized\n");
+        // Sort the auxiliar array and print the results
+        std::sort(auxMutualInfo, auxMutualInfo + options->getNumOutputs() * options->getNumCPUs());
+        distributor->printMI(auxMutualInfo + options->getNumOutputs() * (options->getNumCPUs() - 1),
+                             options->getNumOutputs());
+    } else {
+        MPI_Send(auxMutualInfo, options->getNumCPUs() * options->getNumOutputs(), MPI_INT, 0, MPI_TAG_OUTPUT,
+                 MPI_COMM_WORLD);
+    }
+
+    Utils::log("Process %i: 3-SNP analysis finalized\n", MPIRank);
 
 #ifdef DEBUG
     uint32_t numAnalyzed = 0;
