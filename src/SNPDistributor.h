@@ -4,7 +4,7 @@
  *  Created on: Sep 5, 2014
  *      Author: gonzales
  *
- *  Modified on: December 28, 2016
+ *  Modified on: December 29, 2016
  *           by: Christian Ponte Fernández
  */
 
@@ -20,7 +20,7 @@
 class SNPDistributor {
 public:
     // TODO: using struct with vector and counters instead of creating a specific class
-    typedef struct {
+    static typedef struct {
         vector<char> classVector;
         uint16_t numCases;
         uint16_t numCtrls;
@@ -63,6 +63,10 @@ public:
 
     inline vector<SNP *> getSnpSet() {
         return _snpSet;
+    }
+
+    inline ClassSet_t getClassSet(){
+        return _classSet;
     }
 
 private:
