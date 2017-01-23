@@ -20,7 +20,7 @@
 class SNPDistributor {
 public:
     // TODO: using struct with vector and counters instead of creating a specific class
-    static typedef struct {
+    typedef struct ClassSet_t {
         vector<char> classVector;
         uint16_t numCases;
         uint16_t numCtrls;
