@@ -15,6 +15,8 @@ find_package(Threads REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(MPI REQUIRED)
 
+include_directories(${MPI_INCLUDE_PATH})
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 if(OPENMP_FOUND)
 #   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS} ${OpenMP_C_FLAGS}")
@@ -24,3 +26,4 @@ endif()
 
 add_executable(MPI3SNP ${SOURCE_FILES})
 target_link_libraries(MPI3SNP Threads::Threads)
+target_link_libraries(MPI3SNP ${MPI_LIBRARIES})
