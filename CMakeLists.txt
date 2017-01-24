@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.0)
 project(MPI3SNP)
 
 file(GLOB SOURCE_FILES src/*.cpp)
@@ -25,5 +25,5 @@ if(OPENMP_FOUND)
 endif()
 
 add_executable(MPI3SNP ${SOURCE_FILES})
-target_link_libraries(MPI3SNP Threads::Threads)
+target_link_libraries(MPI3SNP ${MPI_Threads})
 target_link_libraries(MPI3SNP ${MPI_LIBRARIES})
