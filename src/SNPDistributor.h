@@ -16,19 +16,13 @@
 #include "MyFile.h"
 #include "LineReader.h"
 #include "MutualInfo.h"
+#include "BoolVector.h"
 
 class SNPDistributor {
 public:
-    // TODO: using struct with vector and counters instead of creating a specific class
-    typedef struct ClassSet_t {
-        vector<char> classVector;
-        uint16_t numCases;
-        uint16_t numCtrls;
-    } ClassSet_t;
-
     SNPDistributor(Options *options);
 
-    SNPDistributor(Options *options, vector<SNP *> snpSet, ClassSet_t classSet, uint32_t lowerLim, uint32_t upperLim);
+    SNPDistributor(Options *options, vector<SNP *> snpSet, BoolVector classSet, uint32_t lowerLim, uint32_t upperLim);
 
     virtual ~SNPDistributor();
 
@@ -54,18 +48,18 @@ public:
     }
 
     inline uint16_t getNumCases() {
-        return _classSet.numCases;
+        return _classSet.falseCount();
     }
 
     inline uint16_t getNumCtrls() {
-        return _classSet.numCtrls;
+        return _classSet.trueCount();
     }
 
     inline vector<SNP *> getSnpSet() {
         return _snpSet;
     }
 
-    inline ClassSet_t getClassSet(){
+    inline BoolVector getClassSet(){
         return _classSet;
     }
 
@@ -108,7 +102,7 @@ private:
 
     // Array to keep which values are cases
     // False cases, true controls
-    ClassSet_t _classSet;
+    BoolVector _classSet;
 
     // Iterators for the SNPs
     uint32_t _iterDoubleSnp1;

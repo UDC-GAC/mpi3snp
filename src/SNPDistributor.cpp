@@ -31,9 +31,7 @@ SNPDistributor::SNPDistributor(Options *options) {
         Utils::exit("TPED file: file %s could not be opened\n", options->getTPEDFileName().c_str());
     }
 
-    _classSet.classVector.resize(DEFAULT_NUM_INDS);
-    _classSet.numCases = 0;
-    _classSet.numCtrls = 0;
+    _classSet.resize(DEFAULT_NUM_INDS);
     _loadIndsClass(fpTfam);
     myfclose(fpTfam);
 
@@ -46,7 +44,7 @@ SNPDistributor::SNPDistributor(Options *options) {
     _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
 }
 
-SNPDistributor::SNPDistributor(Options *options, vector<SNP *> snpSet, ClassSet_t classSet, uint32_t lowerLim,
+SNPDistributor::SNPDistributor(Options *options, vector<SNP *> snpSet, BoolVector classSet, uint32_t lowerLim,
                                uint32_t upperLim) {
     _options = options;
 
@@ -75,9 +73,8 @@ SNPDistributor::~SNPDistributor() {
 void SNPDistributor::_loadSNPSet(MyFilePt fpTped) {
     SNP *readSNP = new(SNP);
 
-    // TODO: LineReader requires bool * instead of vector<uint8_t> | vector<char>
-    while (_lineReader->readTPEDLine(fpTped, readSNP, _snpSet.size(), _classSet.classVector.size(),
-                                     (bool *) &_classSet.classVector[0])) {
+    while (_lineReader->readTPEDLine(fpTped, readSNP, _snpSet.size(), _classSet.size(),
+                                     &_classSet[0])) {
         _snpSet.push_back(readSNP);
 
         readSNP = new(SNP);
@@ -115,22 +112,13 @@ void SNPDistributor::_loadSNPSet(MyFilePt fpTped) {
 void SNPDistributor::_loadIndsClass(MyFilePt fpTfam) {
     // Load the information from a TFAM file about the cases and controls
     int retValue;
-    _classSet.numCases = 0;
-    _classSet.numCtrls = 0;
 
-    while ((retValue = _lineReader->readTFAMLine(fpTfam, _classSet.classVector.size())) >= 0) {
-
-        if (retValue) {
-            _classSet.numCtrls++;
-            _classSet.classVector.push_back(true);
-        } else {
-            _classSet.numCases++;
-            _classSet.classVector.push_back(false);
-        }
+    while ((retValue = _lineReader->readTFAMLine(fpTfam, _classSet.size())) >= 0) {
+        _classSet.push_back(retValue);
     }
 
-    Utils::log("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", _classSet.classVector.size(),
-               _classSet.numCases, _classSet.numCtrls);
+    Utils::log("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", _classSet.size(),
+               _classSet.falseCount(), _classSet.trueCount());
 #ifdef DEBUG
     for(int i=0; i<numInds; i++){
         if(_indsClass[i]){
