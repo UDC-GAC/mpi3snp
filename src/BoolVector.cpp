@@ -47,9 +47,7 @@ size_t BoolVector::size() {
 
 void BoolVector::resize(size_t newSize){
     bool *temp = new bool[newSize];
-    for (int i = 0; i<arraySize; i++){
-        temp[i] = array[i];
-    }
+    memcpy(temp, array, sizeof(bool) * arraySize);
     delete array;
     array = temp;
     arraySize = newSize;

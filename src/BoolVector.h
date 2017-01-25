@@ -6,6 +6,7 @@
 #define BOOLVECTOR_H
 
 #include <cstdlib>
+#include <cstring>
 
 class BoolVector{
 public:
@@ -17,7 +18,7 @@ public:
     bool get(size_t pos);
     size_t size();
     void resize(size_t newSize);
-    bool &operator [](size_t pos){
+    inline bool &operator [](size_t pos){
         return array[pos];
     }
 private:
