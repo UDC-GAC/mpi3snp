@@ -1,30 +1,28 @@
 #include "SearchMI.h"
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
 
-	double stime, etime;
+    double stime, etime;
 
-	/*get the startup time*/
-	stime = Utils::getSysTime();
+    /*get the startup time*/
+    stime = Utils::getSysTime();
 
-	Options* options = new Options();
+    Options *options = new Options(&argc, &argv);
 
-	/*parse the arguments*/
-	if (!options->parse(argc, argv))
-	{
-		options->printUsage();
-		return 0;
-	}
+    /*parse the arguments*/
+    if (!options->parse()) {
+        options->printUsage();
+        return 0;
+    }
 
-	Search* search = new SearchMI(options);
+    Search *search = new SearchMI(options);
 
-	search->execute();
+    search->execute();
 
-	etime = Utils::getSysTime();
-	Utils::log("Overall time: %.2f seconds\n", etime - stime);
+    etime = Utils::getSysTime();
+    Utils::log("Overall time: %.2f seconds\n", etime - stime);
 
-	delete search;
-	delete options;
-	return 0;
+    delete search;
+    delete options;
+    return 0;
 }
