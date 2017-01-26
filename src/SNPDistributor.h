@@ -3,9 +3,6 @@
  *
  *  Created on: Sep 5, 2014
  *      Author: gonzales
- *
- *  Modified on: December 29, 2016
- *           by: Christian Ponte Fernández
  */
 
 #ifndef SNPDISTRIBUTOR_H_
@@ -20,93 +17,91 @@
 
 class SNPDistributor {
 public:
-    SNPDistributor(Options *options);
+	SNPDistributor(Options* options);
+	virtual ~SNPDistributor();
 
-    SNPDistributor(Options *options, vector<SNP *> snpSet, BoolVector classSet, uint32_t lowerLim, uint32_t upperLim);
+	// Loads all the SNPs in the distributor
+	void loadSNPSet();
 
-    virtual ~SNPDistributor();
+	// Returns the number of pairs that will be computed (all the 3-way combinations)
+	// Also return the ids of the pairs
+	inline uint32_t getPairsSNPs(uint32_t* ids){
+		if(_withLock){
+			return _getPairsSNPsLock(ids);
+		}
+		else{
+			return _getPairsSNPsNoLock(ids);
+		}
+	}
 
-    // Returns the number of pairs that will be computed (all the 3-way combinations)
-    // Also return the ids of the pairs
-    inline uint32_t getPairsSNPs(uint32_t *ids) {
-        if (_withLock) {
-            return _getPairsSNPsLock(ids);
-        } else {
-            return _getPairsSNPsNoLock(ids);
-        }
-    }
+	inline void printMI(MutualInfo* info, uint16_t numOutputs){
+		for(int i=numOutputs-1; i>=0; i--){
+			MutualInfo auxInfo = info[i];
+			_lineReader->printMI(_fpOut, auxInfo._id1, auxInfo._id2, auxInfo._id3, auxInfo._mutualInfoValue);
+		}
+	}
 
-    inline void printMI(MutualInfo *info, uint16_t numOutputs) {
-        for (int i = numOutputs - 1; i >= 0; i--) {
-            MutualInfo auxInfo = info[i];
-            _lineReader->printMI(_fpOut, auxInfo._id1, auxInfo._id2, auxInfo._id3, auxInfo._mutualInfoValue);
-        }
-    }
+	inline uint32_t getNumSnp(){
+		return _snpSet.size();
+	}
 
-    inline uint32_t getNumSnp() {
-        return _snpSet.size();
-    }
+	inline uint16_t getNumCases(){
+		return _indsClass.falseCount();
+	}
 
-    inline uint16_t getNumCases() {
-        return _classSet.falseCount();
-    }
+	inline uint16_t getNumCtrls(){
+		return _indsClass.trueCount();
+	}
 
-    inline uint16_t getNumCtrls() {
-        return _classSet.trueCount();
-    }
-
-    inline vector<SNP *> getSnpSet() {
-        return _snpSet;
-    }
+	inline vector<SNP*> getSnpSet(){
+		return _snpSet;
+	}
 
     inline BoolVector getClassSet(){
-        return _classSet;
+        return _indsClass;
     }
 
 private:
-    // Loads all the SNPs in the distributor
-    void _loadSNPSet(MyFilePt fpTped);
+	// Load the information of which individuals are control and case from the tfam file
+	void _loadIndsClass();
 
-    // Load the information of which individuals are control and case from the tfam file
-    void _loadIndsClass(MyFilePt fpTfam);
+	// Functions to work with mutex
+	inline void _lock() {
+		if (_withLock) {
+			pthread_mutex_lock(&_mutex);
+		}
+	}
+	inline void _unlock() {
+		if (_withLock) {
+			pthread_mutex_unlock(&_mutex);
+		}
+	}
 
-    // Functions to work with mutex
-    inline void _lock() {
-        if (_withLock) {
-            pthread_mutex_lock(&_mutex);
-        }
-    }
+	uint32_t _getPairsSNPsLock(uint32_t* ids);
+	uint32_t _getPairsSNPsNoLock(uint32_t* ids);
 
-    inline void _unlock() {
-        if (_withLock) {
-            pthread_mutex_unlock(&_mutex);
-        }
-    }
+	Options* _options;
+	vector<SNP*> _snpSet;
+	// File handler
+	MyFilePt _fpTfam;
+	MyFilePt _fpTped;
+	MyFilePt _fpOut;
+	LineReader* _lineReader;
+	bool _withLock;
 
-    uint32_t _getPairsSNPsLock(uint32_t *ids);
+	// Variables to indicate if there are more analyses to perform
+	bool _moreDouble;
 
-    uint32_t _getPairsSNPsNoLock(uint32_t *ids);
+	// Variables shared among all threads
+	pthread_mutex_t _mutex;
 
-    Options *_options;
-    // File handler
-    LineReader *_lineReader;
-    MyFilePt _fpOut;
+	// Array to keep which values are cases
+	// False cases, true controls
+	BoolVector _indsClass;
 
-    // Variables shared among all threads
-    pthread_mutex_t _mutex;
-    bool _withLock;
-    vector<SNP *> _snpSet;
-    uint32_t _upperLim;
-    // Variables to indicate if there are more analyses to perform
-    bool _moreDouble;
-
-    // Array to keep which values are cases
-    // False cases, true controls
-    BoolVector _classSet;
-
-    // Iterators for the SNPs
-    uint32_t _iterDoubleSnp1;
-    uint32_t _iterDoubleSnp2;
+	// Iterators for the SNPs
+	uint32_t _iterDoubleSnp1;
+	uint32_t _iterDoubleSnp2;
 };
 
 #endif /* SNPDISTRIBUTOR_H_ */
