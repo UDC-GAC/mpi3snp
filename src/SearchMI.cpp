@@ -9,6 +9,8 @@
  */
 
 #include "SearchMI.h"
+#include "Schedule.h"
+#include "SharedMemSchedule.h"
 
 SearchMI::SearchMI(Options *options) : Search(options) {
     _engines.resize(options->getNumCPUs());
@@ -32,51 +34,39 @@ SearchMI::~SearchMI() {
 }
 
 void SearchMI::execute() {
-    // Obtain the whole SNPSet on all processes
-    SNPDistributor *distributor = new SNPDistributor(_options);
-    vector<SNP *> snpSet = distributor->getSnpSet();
-    SNPDistributor::ClassSet_t classSet = distributor->getClassSet();
-    delete distributor;
+    MPI_Init(_options->get_argc(), _options->get_argv());
 
-    MPI_Init(NULL, NULL);
-
-    _mpiMI(_options, _threadParams, snpSet, classSet);
+    _mpiMI(_options, _threadParams);
 
     MPI_Finalize();
 }
 
-void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, vector<SNP *> snpSet,
-                       SNPDistributor::ClassSet_t classSet) {
+void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
     double stime = Utils::getSysTime();
     double etime;
 
-    int MPIRank, MPISize;
-    MPI_Comm_rank(MPI_COMM_WORLD, &MPIRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
-
-    // Calculate lower and upper SNP index for each process
-    uint32_t tuplesPerProc, n, k, sum;
-    n = snpSet.size();
-    tuplesPerProc = (n - 1) * n / (2 * MPISize);
-    sum = 0;
-    k = n;
-    for (int procId = 0; procId <= MPIRank; procId++) {
-        sum += n - k;
-        n = k;
-        k = (1 + sqrt(1 + 4 * (n * n - n - 2 * tuplesPerProc))) / 2;
-    }
-    if (MPIRank == MPISize - 1) {
-        k = 0;
-    }
+    int mpiRank, mpiSize;
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
 
     // Create one SNPDistributor per process
-    SNPDistributor *distributor = new SNPDistributor(options, snpSet, classSet, sum, sum + n - k);
+    SNPDistributor *distributor = new SNPDistributor(options);
+    distributor->loadSNPSet();
+    vector<SNP *> snpSet = distributor->getSnpSet();
+
+    Schedule *schedule = new SharedMemSchedule(snpSet.size(), mpiSize);
+
+    // Declaration of MPI Datatypes
+    MPI_Datatype MPI_MUTUAL_INFO;
+    MPI_Type_contiguous(sizeof(MutualInfo), MPI_CHAR, &MPI_MUTUAL_INFO);
+    MPI_Type_commit(&MPI_MUTUAL_INFO);
+
+    std::vector<std::vector<Block *>> blocks = schedule->getBlocks(mpiRank);
+    distributor->setSNPBlocks(blocks);
 
     etime = Utils::getSysTime();
-    Utils::log("Process %i: loaded %ld SNPs in %.2f seconds, computing %i SNPs\n", MPIRank, snpSet.size(),
-               etime - stime,
-               n - k);
-
+    Utils::log("Process %i: loaded %ld SNPs in %.2f seconds, computing %i SNP blocks\n", mpiRank, snpSet.size(),
+            etime - stime, blocks.size());
     vector<pthread_t> threadIDs(options->getNumCPUs(), 0);
 
     // Computation of the single-SNP entropy
@@ -91,8 +81,8 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, ve
     }
 
     MutualInfo *auxMutualInfo;
-    if (MPIRank == 0) { // Master
-        auxMutualInfo = new MutualInfo[MPISize * options->getNumCPUs() * options->getNumOutputs()];
+    if (mpiRank == 0) { // Master
+        auxMutualInfo = new MutualInfo[mpiSize * options->getNumCPUs() * options->getNumOutputs()];
     } else {
         auxMutualInfo = new MutualInfo[options->getNumCPUs() * options->getNumOutputs()];
     }
@@ -105,23 +95,23 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, ve
     }
 
     // Gather all the results on the master process and print output
-    if (MPIRank == 0) {
-        for (int rank = 1; rank <= MPISize; rank++) {
+    if (mpiRank == 0) {
+        for (int rank = 1; rank < mpiSize; rank++) {
             MPI_Recv(&auxMutualInfo[rank * options->getNumCPUs() * options->getNumOutputs()],
-                     options->getNumCPUs() * options->getNumOutputs(), MPI_INT, rank, MPI_TAG_OUTPUT, MPI_COMM_WORLD,
+                     options->getNumCPUs() * options->getNumOutputs(), MPI_MUTUAL_INFO, rank, MPI_TAG_OUTPUT, MPI_COMM_WORLD,
                      NULL);
         }
 
         // Sort the auxiliar array and print the results
-        std::sort(auxMutualInfo, auxMutualInfo + options->getNumOutputs() * options->getNumCPUs());
-        distributor->printMI(auxMutualInfo + options->getNumOutputs() * (options->getNumCPUs() - 1),
+        std::sort(auxMutualInfo, auxMutualInfo + options->getNumOutputs() * options->getNumCPUs() * mpiSize);
+        distributor->printMI(auxMutualInfo + options->getNumOutputs() * (options->getNumCPUs() * mpiSize - 1),
                              options->getNumOutputs());
     } else {
-        MPI_Send(auxMutualInfo, options->getNumCPUs() * options->getNumOutputs(), MPI_INT, 0, MPI_TAG_OUTPUT,
+        MPI_Send(auxMutualInfo, options->getNumCPUs() * options->getNumOutputs(), MPI_MUTUAL_INFO, 0, MPI_TAG_OUTPUT,
                  MPI_COMM_WORLD);
     }
 
-    Utils::log("Process %i: 3-SNP analysis finalized\n", MPIRank);
+    Utils::log("Process %i: 3-SNP analysis finalized\n", mpiRank);
 
 #ifdef DEBUG
     uint32_t numAnalyzed = 0;
@@ -134,6 +124,8 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams, ve
 #endif
 
     // Release the distributor
+    MPI_Type_free(&MPI_MUTUAL_INFO);
+    delete schedule;
     delete distributor;
     delete[] auxMutualInfo;
     threadIDs.clear();
