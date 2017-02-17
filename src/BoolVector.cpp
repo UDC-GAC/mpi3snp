@@ -26,7 +26,7 @@ size_t BoolVector::trueCount() {
 
 void BoolVector::push_back(bool value){
     if (count == arraySize){
-        resize(arraySize*2 + 1);
+        reserve(arraySize * 2 + 1);
     }
 
     array[count++] = value;
@@ -45,7 +45,7 @@ size_t BoolVector::size() {
     return count;
 }
 
-void BoolVector::resize(size_t newSize){
+void BoolVector::reserve(size_t newSize){
     bool *temp = new bool[newSize];
     memcpy(temp, array, sizeof(bool) * arraySize);
     delete array;

@@ -17,7 +17,7 @@ public:
     void push_back(bool value);
     bool get(size_t pos);
     size_t size();
-    void resize(size_t newSize);
+    void reserve(size_t newSize);
     inline bool &operator [](size_t pos){
         return array[pos];
     }
