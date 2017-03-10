@@ -11,7 +11,7 @@ class IOMpi {
 public:
     IOMpi();
     ~IOMpi();
-    int Cprintf();
+    int Cprintf(char *format, ...);
 
 private:
     const int BUFFER_SIZE = 10240;

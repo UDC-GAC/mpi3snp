@@ -14,7 +14,7 @@ IOMpi::IOMpi() {
 }
 
 IOMpi::~IOMpi() {
-    MPI_Comm_free(io_comm);
+    MPI_Comm_free(&io_comm);
     if (io_buff != NULL){
         delete io_buff;
     }
@@ -24,9 +24,9 @@ int IOMpi::Get_io_rank() {
     // Determine IO process
     int mpi_io, flag, io_rank;
     MPI_Attr_get(MPI_COMM_WORLD, MPI_IO, &mpi_io, &flag);
-    if (flag == 0) {
+    if (!flag) {
         // Attribute not cached
-        io_rank = MPI_PROC_NULL;
+        io_rank = 0;
     } else if (mpi_io == MPI_PROC_NULL) {
         // No process can carry IO
         io_rank = MPI_PROC_NULL;
@@ -34,11 +34,12 @@ int IOMpi::Get_io_rank() {
         io_rank = 0;
     } else {
         // Multiple IO processes
-        MPI_Allreduce(mpi_io, &io_rank, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+        MPI_Allreduce(&mpi_io, &io_rank, 1, MPI_INT, MPI_MIN, io_comm);
     }
     return io_rank;
 }
 
+// Collective printf
 int IOMpi::Cprintf(char *format, ...) {
     va_list args;
     int i;
