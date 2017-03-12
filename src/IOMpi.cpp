@@ -10,11 +10,12 @@ IOMpi::IOMpi() {
     MPI_Comm_rank(io_comm, &my_rank);
     io_rank = MPI_PROC_NULL;
     cprintf_tag = 0;
+    pthread_mutex_init(&cprintf_mutex, NULL);
     io_buff = NULL;
 }
 
 IOMpi::~IOMpi() {
-    MPI_Comm_free(&io_comm);
+    pthread_mutex_destroy(&cprintf_mutex);
     if (io_buff != NULL){
         delete io_buff;
     }
@@ -42,7 +43,7 @@ int IOMpi::Get_io_rank() {
 // Collective printf
 int IOMpi::Cprintf(char *format, ...) {
     va_list args;
-    int i;
+    int tag, i;
 
     if (io_rank == MPI_PROC_NULL){
         io_rank = Get_io_rank();
@@ -52,34 +53,37 @@ int IOMpi::Cprintf(char *format, ...) {
         io_buff = new char[BUFFER_SIZE];
     }
 
+    pthread_mutex_lock(&cprintf_mutex);
+    tag = cprintf_tag++;
+    pthread_mutex_unlock(&cprintf_mutex);
+
     if (my_rank == io_rank){
         for (i=0; i<my_rank; i++){
-            if (MPI_Recv(io_buff, BUFFER_SIZE, MPI_CHAR, i, cprintf_tag, io_comm, NULL) != MPI_SUCCESS){
+            if (MPI_Recv(io_buff, BUFFER_SIZE, MPI_CHAR, i, tag, io_comm, NULL) != MPI_SUCCESS){
                 return -1;
             }
-            printf("Process %d > %s\n", i, io_buff);
+            printf("Process %d > %s", i, io_buff);
             fflush(stdout);
         }
         va_start(args, format);
         vsprintf(io_buff, format, args);
         va_end(args);
-        printf("Process %d > %s\n", my_rank, io_buff);
+        printf("Process %d > %s", my_rank, io_buff);
         for (i=my_rank+1; i<comm_size; i++){
-            if (MPI_Recv(io_buff, BUFFER_SIZE, MPI_CHAR, i, cprintf_tag, io_comm, NULL) != MPI_SUCCESS){
+            if (MPI_Recv(io_buff, BUFFER_SIZE, MPI_CHAR, i, tag, io_comm, NULL) != MPI_SUCCESS){
                 return -1;
             }
-            printf("Process %d > %s\n", i, io_buff);
+            printf("Process %d > %s", i, io_buff);
             fflush(stdout);
         }
     } else {
         va_start(args, format);
         vsprintf(io_buff, format, args);
         va_end(args);
-        if (MPI_Send(io_buff, strlen(io_buff) + 1, MPI_CHAR, io_rank, cprintf_tag, io_comm) != MPI_SUCCESS){
+        if (MPI_Send(io_buff, strlen(io_buff) + 1, MPI_CHAR, io_rank, tag, io_comm) != MPI_SUCCESS){
             return -1;
         }
     }
-    cprintf_tag++;
     /* TODO:
      - return number of characters printed
     */
