@@ -16,6 +16,7 @@
 #include "ContTable.h"
 #include "float.h"
 #include <mpi.h>
+#include "IOMpi.h"
 
 class SearchMI : public Search {
 public:

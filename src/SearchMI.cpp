@@ -38,6 +38,8 @@ void SearchMI::execute() {
 
     _mpiMI(_options, _threadParams);
 
+    IOMpi::Deallocate_MPI_resources();
+
     MPI_Finalize();
 }
 
@@ -65,8 +67,8 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
     distributor->setSNPBlocks(blocks);
 
     etime = Utils::getSysTime();
-    Utils::log("Process %i: loaded %ld SNPs in %.2f seconds, computing %i SNP blocks\n", mpiRank, snpSet.size(),
-            etime - stime, blocks.size());
+    IOMpi::Instance().Cprintf("Process %i: loaded %ld SNPs in %.2f seconds, computing %i SNP blocks\n", mpiRank,
+                              snpSet.size(), etime - stime, blocks.size());
     vector<pthread_t> threadIDs(options->getNumCPUs(), 0);
 
     // Computation of the single-SNP entropy
@@ -98,7 +100,8 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
     if (mpiRank == 0) {
         for (int rank = 1; rank < mpiSize; rank++) {
             MPI_Recv(&auxMutualInfo[rank * options->getNumCPUs() * options->getNumOutputs()],
-                     options->getNumCPUs() * options->getNumOutputs(), MPI_MUTUAL_INFO, rank, MPI_TAG_OUTPUT, MPI_COMM_WORLD,
+                     options->getNumCPUs() * options->getNumOutputs(), MPI_MUTUAL_INFO, rank, MPI_TAG_OUTPUT,
+                     MPI_COMM_WORLD,
                      NULL);
         }
 
@@ -111,7 +114,7 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
                  MPI_COMM_WORLD);
     }
 
-    Utils::log("Process %i: 3-SNP analysis finalized\n", mpiRank);
+    IOMpi::Instance().Cprintf("Process %i: 3-SNP analysis finalized\n", mpiRank);
 
 #ifdef DEBUG
     uint32_t numAnalyzed = 0;
@@ -183,8 +186,8 @@ void *SearchMI::_threadMI(void *arg) {
 
 #ifdef BENCHMARKING
     etime = Utils::getSysTime();
-    Utils::log("CPU thread (%d) %f seconds calculating %lu analysis\n",
-               params->_tid, etime - stime, myTotalAnal);
+    IOMpi::Instance().Cprintf("CPU thread (%d) %f seconds calculating %lu analysis\n", params->_tid, etime - stime,
+                              myTotalAnal);
 #endif
 
     delete[] auxIds;
