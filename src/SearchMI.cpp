@@ -34,13 +34,7 @@ SearchMI::~SearchMI() {
 }
 
 void SearchMI::execute() {
-    MPI_Init(_options->get_argc(), _options->get_argv());
-
     _mpiMI(_options, _threadParams);
-
-    IOMpi::Deallocate_MPI_resources();
-
-    MPI_Finalize();
 }
 
 void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
@@ -67,7 +61,7 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
     distributor->setSNPBlocks(blocks);
 
     etime = Utils::getSysTime();
-    IOMpi::Instance().Cprintf("Process %i: loaded %ld SNPs in %.2f seconds, computing %i SNP blocks\n", mpiRank,
+    IOMpi::Instance().Cprintf("loaded %ld SNPs in %.2f seconds, computing %i SNP blocks\n", mpiRank,
                               snpSet.size(), etime - stime, blocks.size());
     vector<pthread_t> threadIDs(options->getNumCPUs(), 0);
 
@@ -114,7 +108,7 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
                  MPI_COMM_WORLD);
     }
 
-    IOMpi::Instance().Cprintf("Process %i: 3-SNP analysis finalized\n", mpiRank);
+    IOMpi::Instance().Cprintf("3-SNP analysis finalized\n", mpiRank);
 
 #ifdef DEBUG
     uint32_t numAnalyzed = 0;

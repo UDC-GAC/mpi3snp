@@ -1,11 +1,13 @@
 #include "SearchMI.h"
+#include "IOMpi.h"
 
 int main(int argc, char *argv[]) {
+    MPI_Init(&argc, &argv);
 
     double stime, etime;
 
     /*get the startup time*/
-    stime = Utils::getSysTime();
+    stime = MPI_Wtime();
 
     Options *options = new Options(&argc, &argv);
 
@@ -19,10 +21,16 @@ int main(int argc, char *argv[]) {
 
     search->execute();
 
-    etime = Utils::getSysTime();
-    Utils::log("Overall time: %.2f seconds\n", etime - stime);
+    MPI_Barrier(MPI_COMM_WORLD);
+    etime = MPI_Wtime();
+
+    IOMpi::Instance().Mprintf("Overall time: %.2f seconds\n", etime - stime);
 
     delete search;
     delete options;
+
+    IOMpi::Deallocate_MPI_resources();
+    MPI_Finalize();
+
     return 0;
 }
