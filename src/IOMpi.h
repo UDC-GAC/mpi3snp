@@ -35,6 +35,8 @@ public:
 
     int Cprintf(char *format, ...);
 
+    int Mprintf(char *format, ...);
+
 protected:
     /* Methods */
     IOMpi();
@@ -44,7 +46,7 @@ protected:
     int Get_io_rank();
 
     /* Attributes */
-    const int BUFFER_SIZE = 10240;
+    const int BUFFER_SIZE = 1024;
 
     MPI_Comm io_comm;
     int io_rank, my_rank, comm_size;

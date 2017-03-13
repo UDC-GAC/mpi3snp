@@ -89,3 +89,22 @@ int IOMpi::Cprintf(char *format, ...) {
     */
     return 0;
 }
+
+int IOMpi::Mprintf(char *format, ...) {
+    if (my_rank != 0){
+        return 0;
+    }
+
+    if (io_buff == NULL){
+        io_buff = new char[BUFFER_SIZE];
+    }
+
+    va_list args;
+    va_start(args, format);
+    vsprintf(io_buff, format, args);
+    va_end(args);
+    printf(io_buff);
+    fflush(stdout);
+
+    return 0;
+}
