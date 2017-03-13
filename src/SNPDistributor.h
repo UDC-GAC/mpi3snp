@@ -15,6 +15,7 @@
 #include "MutualInfo.h"
 #include "BoolVector.h"
 #include "Block.h"
+#include "IOMpi.h"
 
 class SNPDistributor {
 public:

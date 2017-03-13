@@ -50,7 +50,7 @@ void SNPDistributor::_loadIndsClass() {
         _indsClass.push_back(retValue);
     }
 
-    Utils::log("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", _indsClass.size(),
+    IOMpi::Instance().Cprintf("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", _indsClass.size(),
                _indsClass.falseCount(), _indsClass.trueCount());
 #ifdef DEBUG
     for(int i=0; i<numInds; i++){
