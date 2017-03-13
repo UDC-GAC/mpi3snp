@@ -9,6 +9,7 @@
 #define OPTIONS_H_
 
 #include "Utils.h"
+#include "IOMpi.h"
 
 class Options {
 public:

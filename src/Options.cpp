@@ -75,13 +75,6 @@ bool Options::parse() {
         return false;
     }
 
-    // Print out the command line
-    fprintf(stderr, "Command: ");
-    for (int i = 0; i < argc; ++i) {
-        fprintf(stderr, "%s ", argv[i]);
-    }
-    fputc('\n', stderr);
-
     // For the other options
     while (argind < argc) {
         // Input file
@@ -142,9 +135,9 @@ bool Options::parse() {
         }
     }
 
-    Utils::log("Number of CPU threads: %d\n", _numCPUs);
-    Utils::log("\nNumber of outputs: %hu\n", _numOutputs);
-    Utils::log("Number of pairs by block: %hu\n", NUM_PAIRS_BLOCK);
+    IOMpi::Instance().Mprintf("Number of CPU threads: %d\n", _numCPUs);
+    IOMpi::Instance().Mprintf("Number of outputs: %hu\n", _numOutputs);
+    IOMpi::Instance().Mprintf("Number of pairs by block: %hu\n", NUM_PAIRS_BLOCK);
 
     if (!strcmp(_tfamFileName.c_str(), "") || !strcmp(_tpedFileName.c_str(), "")) {
         Utils::log("Input files not specified!!!\n");
