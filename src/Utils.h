@@ -13,7 +13,6 @@
 class Utils
 {
 public:
-	static void log(const char* args, ...);
 	static void exit(const char* args, ...);
 	static void cmpExit(bool v, const char* args, ...);
 	static double getSysTime();

@@ -8,14 +8,6 @@
 #include "Utils.h"
 #include <sys/time.h>
 
-void Utils::log(const char* args, ...)
-{
-	va_list va_ptr;
-	fprintf(stderr, "[P%d]", getpid());
-	va_start(va_ptr, args);
-	vfprintf(stderr, args, va_ptr);
-	va_end(va_ptr);
-}
 void Utils::exit(const char* args, ...)
 {
 	va_list va_ptr;
