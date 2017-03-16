@@ -84,7 +84,7 @@ bool Options::parse() {
                 _tpedFileName = argv[argind];
                 argind++;
             } else {
-                Utils::log("not specify value for the parameter %s\n", argv[argind - 1]);
+                IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
                 return false;
             }
         } else if (!strcmp(argv[argind], "-rf")) {
@@ -93,7 +93,7 @@ bool Options::parse() {
                 _tfamFileName = argv[argind];
                 argind++;
             } else {
-                Utils::log("not specify value for the parameter %s\n", argv[argind - 1]);
+                IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
                 return false;
             }
         } else if (!strcmp(argv[argind], "-o")) {
@@ -104,7 +104,7 @@ bool Options::parse() {
                     argind++;
                 }
             } else {
-                Utils::log("not specify value for the parameter %s\n", argv[argind - 1]);
+                IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
                 return false;
             }
         } else if (!strcmp(argv[argind], "-t")) {
@@ -118,7 +118,7 @@ bool Options::parse() {
                 argind++;
                 _numCPUs = intVal;
             } else {
-                Utils::log("not specify value for the parameter %s\n", argv[argind - 1]);
+                IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
                 return false;
             }
         } else if (!strcmp(argv[argind], "-no")) {
@@ -129,7 +129,7 @@ bool Options::parse() {
                 argind++;
                 _numOutputs = uintVal;
             } else {
-                Utils::log("not specify value for the parameter %s\n", argv[argind - 1]);
+                IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
                 return false;
             }
         }
@@ -140,12 +140,12 @@ bool Options::parse() {
     IOMpi::Instance().Mprintf("Number of pairs by block: %hu\n", NUM_PAIRS_BLOCK);
 
     if (!strcmp(_tfamFileName.c_str(), "") || !strcmp(_tpedFileName.c_str(), "")) {
-        Utils::log("Input files not specified!!!\n");
+        IOMpi::Instance().Mprintf("Input files not specified!!!\n");
         return false;
     }
 
     if (!strcmp(_outFileName.c_str(), "")) {
-        Utils::log("Output file not specified!!!\n");
+        IOMpi::Instance().Mprintf("Output file not specified!!!\n");
         return false;
     }
 

@@ -10,6 +10,7 @@
 
 #include "MyFile.h"
 #include "SNP.h"
+#include "IOMpi.h"
 
 class LineReader {
 public:
@@ -54,7 +55,7 @@ private:
 		if (_fileBufferSentinel >= 0) {
 			_fileBuffer[--_fileBufferSentinel] = ch;
 		} else {
-			Utils::log("Two consecutive ungetc operations occurred\n");
+			IOMpi::Instance().Mprintf("Two consecutive ungetc operations occurred\n");
 			return -1; /*an error occurred, return end-of-file marker*/
 		}
 		return ch;
