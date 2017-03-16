@@ -33,9 +33,9 @@ public:
     IOMpi &operator=(IOMpi const &) = delete;  // Copy assign
     IOMpi &operator=(IOMpi &&) = delete;      // Move assign
 
-    int Cprintf(char *format, ...);
+    int Cprintf(const char *format, ...);
 
-    int Mprintf(char *format, ...);
+    int Mprintf(const char *format, ...);
 
 protected:
     /* Methods */

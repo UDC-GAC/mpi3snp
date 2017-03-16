@@ -41,7 +41,7 @@ int IOMpi::Get_io_rank() {
 }
 
 // Collective printf
-int IOMpi::Cprintf(char *format, ...) {
+int IOMpi::Cprintf(const char *format, ...) {
     va_list args;
     int tag, i;
 
@@ -90,7 +90,7 @@ int IOMpi::Cprintf(char *format, ...) {
     return 0;
 }
 
-int IOMpi::Mprintf(char *format, ...) {
+int IOMpi::Mprintf(const char *format, ...) {
     if (my_rank != 0){
         return 0;
     }
