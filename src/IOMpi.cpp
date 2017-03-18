@@ -17,7 +17,7 @@ IOMpi::IOMpi() {
 IOMpi::~IOMpi() {
     pthread_mutex_destroy(&cprintf_mutex);
     if (io_buff != NULL){
-        delete io_buff;
+        delete[] io_buff;
     }
 }
 
@@ -28,10 +28,7 @@ int IOMpi::Get_io_rank() {
     if (!flag) {
         // Attribute not cached
         io_rank = 0;
-    } else if (mpi_io == MPI_PROC_NULL) {
-        // No process can carry IO
-        io_rank = MPI_PROC_NULL;
-    } else if (mpi_io == MPI_ANY_SOURCE) {
+    } else if (mpi_io == MPI_PROC_NULL || mpi_io == MPI_ANY_SOURCE || comm_size < mpi_io) {
         io_rank = 0;
     } else {
         // Multiple IO processes
