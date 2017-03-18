@@ -7,6 +7,7 @@
 
 #include "Block.h"
 #include "Schedule.h"
+#include <limits>
 
 class NoCommSchedule {
 public:
@@ -16,24 +17,25 @@ public:
 
     std::vector<std::vector<Block *>> Get_blocks(unsigned int proc_id);
 
-    int Who_has(std::vector<Block *> comb);
-
-    unsigned int Who_has2(std::multiset<Block, std::less<Block>> c);
+    unsigned int Who_has(std::multiset<Block, std::less<Block>> c);
 
 private:
-    unsigned int k;
-
-    // Store block distribution
+    // Attributes
+    static const unsigned int INVALID_PROC = std::numeric_limits<unsigned int>::max();
+    const unsigned int k;
     std::vector<std::pair<std::multiset<Block, std::less<Block>>, unsigned int>> *dist;
 
     // Auxiliary methods
-    void distribute_problem(size_t problem_size, unsigned int num_proc);
+    void Create_blocks(size_t problem_size, unsigned int num_proc);
 
-    void combine_blocks(unsigned int k);
+    void Combine_blocks(unsigned int k);
 
-    void assign_combinations();
+    void Generate_translation_table(int range, std::vector<std::pair<unsigned int, unsigned int>> *output);
 
-    bool Multiset_greater_than(std::multiset<Block> m1, std::multiset<Block> m2);
+    unsigned int Optimal_selection(std::vector<std::pair<unsigned int, unsigned int>> *tr, unsigned int range,
+                                   unsigned int p, int flag);
+
+    void Assign_combinations(unsigned int num_proc);
 };
 
 
