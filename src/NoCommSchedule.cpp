@@ -10,7 +10,7 @@ void NoCommSchedule::Create_blocks(size_t problem_size, unsigned int num_proc) {
 
     auto *pair_list = &dist[0];
     pair_list->reserve(num_proc);
-    for (int i = 0; i < num_proc; i++) {
+    for (unsigned int i = 0; i < num_proc; i++) {
         std::pair<std::multiset<Block, std::less<Block>>, unsigned int> pair;
         size_t beginning = i > 0 ? (*pair_list)[i - 1].first.begin()->x + (*pair_list)[i - 1].first.begin()->xlen : 0;
         size_t size = block_size + (remainder-- > 0 ? 1 : 0);
@@ -138,7 +138,7 @@ void NoCommSchedule::Assign_combinations(unsigned int num_proc) {
         /* Distribute all combinations using the translation table */
         int proc_flag[num_proc];
         unsigned long count = dist[i].size();
-        for (int j = 0; j < num_proc; j++)
+        for (unsigned int j = 0; j < num_proc; j++)
             proc_flag[j] = 0;
         p = 0;
         while (count > 0) {
@@ -167,7 +167,7 @@ NoCommSchedule::NoCommSchedule(size_t problem_size, unsigned int k, unsigned int
 }
 
 NoCommSchedule::~NoCommSchedule() {
-    delete dist;
+    delete[] dist;
 }
 
 unsigned int NoCommSchedule::Who_has(std::multiset<Block, std::less<Block>> c) {
@@ -199,7 +199,12 @@ unsigned int NoCommSchedule::Who_has(std::multiset<Block, std::less<Block>> c) {
     }
 }
 
-std::vector<std::vector<Block *>> NoCommSchedule::Get_blocks(unsigned int proc_id) {
-    std::vector<std::vector<Block *>> empty;
-    return empty;
+void NoCommSchedule::Get_blocks(unsigned int proc_id, std::vector<std::multiset<Block, std::less<Block>>> *block_list) {
+    for (unsigned int i = 1; i < k; i++){
+        for (auto it = dist[i].begin(); it != dist[i].end(); it++){
+            if (it->second == proc_id){
+                block_list->push_back(it->first);
+            }
+        }
+    }
 }

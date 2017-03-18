@@ -9,13 +9,13 @@
 #include "Schedule.h"
 #include <limits>
 
-class NoCommSchedule {
+class NoCommSchedule : public Schedule {
 public:
     NoCommSchedule(size_t problem_size, unsigned int k, unsigned int num_proc);
 
     ~NoCommSchedule();
 
-    std::vector<std::vector<Block *>> Get_blocks(unsigned int proc_id);
+    void Get_blocks(unsigned int proc_id, std::vector<std::multiset<Block, std::less<Block>>> *block_list);
 
     unsigned int Who_has(std::multiset<Block, std::less<Block>> c);
 
