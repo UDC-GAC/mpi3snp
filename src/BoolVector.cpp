@@ -13,7 +13,7 @@ BoolVector::BoolVector(){
 }
 
 BoolVector::~BoolVector(){
-    delete array;
+    delete[] array;
 }
 
 size_t BoolVector::falseCount() {
@@ -48,7 +48,7 @@ size_t BoolVector::size() {
 void BoolVector::reserve(size_t newSize){
     bool *temp = new bool[newSize];
     memcpy(temp, array, sizeof(bool) * arraySize);
-    delete array;
+    delete[] array;
     array = temp;
     arraySize = newSize;
 }
