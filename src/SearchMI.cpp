@@ -10,7 +10,7 @@
 
 #include "SearchMI.h"
 #include "Schedule.h"
-#include "SharedMemSchedule.h"
+#include "NoCommSchedule.h"
 
 SearchMI::SearchMI(Options *options) : Search(options) {
     _engines.resize(options->getNumCPUs());
@@ -24,7 +24,7 @@ SearchMI::SearchMI(Options *options) : Search(options) {
 }
 
 SearchMI::~SearchMI() {
-    for (int i = 0; i < _engines.size(); i++) {
+    for (unsigned int i = 0; i < _engines.size(); i++) {
         delete _engines[i];
         delete _threadParams[i];
     }
@@ -50,18 +50,20 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
     distributor->loadSNPSet();
     vector<SNP *> snpSet = distributor->getSnpSet();
 
-    Schedule *schedule = new SharedMemSchedule(snpSet.size(), mpiSize);
+    Schedule *schedule = new NoCommSchedule(snpSet.size(), 2, mpiSize);
 
     // Declaration of MPI Datatypes
     MPI_Datatype MPI_MUTUAL_INFO;
     MPI_Type_contiguous(sizeof(MutualInfo), MPI_CHAR, &MPI_MUTUAL_INFO);
     MPI_Type_commit(&MPI_MUTUAL_INFO);
 
-    std::vector<std::vector<Block *>> blocks = schedule->getBlocks(mpiRank);
+    std::vector<std::multiset<Block>> blocks;
+    blocks.clear();
+    schedule->Get_blocks(mpiRank, &blocks);
     distributor->setSNPBlocks(blocks);
 
     etime = Utils::getSysTime();
-    IOMpi::Instance().Cprintf("loaded %ld SNPs in %.2f seconds, computing %i SNP blocks\n", mpiRank,
+    IOMpi::Instance().Cprintf("loaded %ld SNPs in %.2f seconds, computing %i SNP blocks\n",
                               snpSet.size(), etime - stime, blocks.size());
     vector<pthread_t> threadIDs(options->getNumCPUs(), 0);
 
@@ -126,6 +128,8 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
     delete distributor;
     delete[] auxMutualInfo;
     threadIDs.clear();
+
+    return NULL;
 }
 
 void *SearchMI::_threadMI(void *arg) {
