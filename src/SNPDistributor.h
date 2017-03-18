@@ -8,6 +8,7 @@
 #ifndef SNPDISTRIBUTOR_H_
 #define SNPDISTRIBUTOR_H_
 
+#include <set>
 #include "SNP.h"
 #include "Options.h"
 #include "MyFile.h"
@@ -63,13 +64,23 @@ public:
         return _indsClass;
     }
 
-    inline void setSNPBlocks(std::vector<std::vector<Block *>> blockList) {
-        this->blockList = blockList;
-        blockIt = this->blockList.begin();
-        index1 = (*blockIt)[0]->x;
-        index1Lim = index1 + (*blockIt)[0]->xlen;
-        index2 = (*blockIt)[1]->x;
-        index2Lim = index2 + (*blockIt)[1]->xlen;
+    inline void setSNPBlocks(std::vector<std::multiset<Block>> block_list) {
+        this->block_list = block_list;
+        block_it = this->block_list.begin();
+        auto set = block_it->begin();
+        if (b1 != NULL){
+            delete b1;
+        }
+        b1 = new Block(set->x, set->xlen);
+        index1 = b1->x;
+        index1Lim = index1 + b1->xlen;
+        set++;
+        if (b2 != NULL){
+            delete b1;
+        }
+        b2 = new Block(set->x, set->xlen);
+        index2 = b2->x;
+        index2Lim = index2 + b2->xlen;
 
         isDiagonal = index1 == index2;
         if (isDiagonal) {
@@ -100,10 +111,11 @@ private:
 
     Options *_options;
     std::vector<SNP *> _snpSet;
-    std::vector<std::vector<Block *>> blockList;
+    std::vector<std::multiset<Block>> block_list;
+    Block *b1, *b2;
     // Iterators for the SNPs
     size_t index1, index1Lim, index2, index2Lim;
-    std::vector<std::vector<Block *>>::iterator blockIt;
+    std::vector<std::multiset<Block>>::iterator block_it;
     bool isDiagonal;
 
     // File handler

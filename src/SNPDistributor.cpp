@@ -7,7 +7,8 @@
 
 #include "SNPDistributor.h"
 
-SNPDistributor::SNPDistributor(Options *options) {
+SNPDistributor::SNPDistributor(Options *options) :
+        b1(NULL), b2(NULL) {
     _options = options;
     _snpSet.reserve(DEFAULT_NUM_SNPS);
 
@@ -51,7 +52,7 @@ void SNPDistributor::_loadIndsClass() {
     }
 
     IOMpi::Instance().Cprintf("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", _indsClass.size(),
-               _indsClass.falseCount(), _indsClass.trueCount());
+                              _indsClass.falseCount(), _indsClass.trueCount());
 #ifdef DEBUG
     for(int i=0; i<numInds; i++){
         if(_indsClass[i]){
@@ -126,22 +127,28 @@ uint32_t SNPDistributor::_getPairsSNPsNoLock(uint32_t *ids) {
                 // Update index1 and restart index2
                 index1++;
                 if (isDiagonal) {
-                    if (index1 == index1Lim - 1){
+                    if (index1 == index1Lim - 1) {
                         index1++;
                     } else {
                         index2 = index1 + 1;
                     }
                 } else {
-                    index2 = (*blockIt)[1]->x;
+                    index2 = b2->x;
                 }
 
                 // Update blockIt based on index1
-                if (index1 == index1Lim){
-                    if (++blockIt != blockList.end()){
-                        index1 = (*blockIt)[0]->x;
-                        index1Lim = index1 + (*blockIt)[0]->xlen;
-                        index2 = (*blockIt)[1]->x;
-                        index2Lim = index2 + (*blockIt)[1]->xlen;
+                if (index1 == index1Lim) {
+                    if (++block_it != block_list.end()) {
+                        auto set = block_it->begin();
+                        delete b1;
+                        b1 = new Block(set->x, set->xlen);
+                        set++;
+                        delete b2;
+                        b2 = new Block(set->x, set->xlen);
+                        index1 = b1->x;
+                        index1Lim = index1 + b1->xlen;
+                        index2 = b2->x;
+                        index2Lim = index2 + b2->xlen;
                     } else {
                         _moreDouble = false;
                         break;
