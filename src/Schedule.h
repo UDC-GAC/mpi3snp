@@ -6,12 +6,14 @@
 #define SCHEDULE_H
 
 #include <vector>
+#include <set>
 #include "Block.h"
 
 class Schedule {
 public:
-    virtual std::vector<std::vector<Block *>> getBlocks(int procId) =0;
-    virtual int whoHas(std::vector<Block *> comb) =0;
+    virtual void Get_blocks(unsigned int proc_id, std::vector<std::multiset<Block, std::less<Block>>> *block_list) =0;
+    virtual unsigned int Who_has(std::multiset<Block, std::less<Block>> c) =0;
+    virtual ~Schedule(){};
 };
 
 #endif //SCHEDULE_H
