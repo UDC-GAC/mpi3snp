@@ -24,7 +24,9 @@ IOMpi::~IOMpi() {
 int IOMpi::Get_io_rank() {
     // Determine IO process
     int mpi_io, flag, io_rank;
+
     MPI_Attr_get(MPI_COMM_WORLD, MPI_IO, &mpi_io, &flag);
+
     if (!flag) {
         // Attribute not cached
         io_rank = 0;
@@ -32,8 +34,17 @@ int IOMpi::Get_io_rank() {
         io_rank = 0;
     } else {
         // Multiple IO processes
-        MPI_Allreduce(&mpi_io, &io_rank, 1, MPI_INT, MPI_MIN, io_comm);
+        int err = MPI_Allreduce(&mpi_io, &io_rank, 1, MPI_INT, MPI_MIN, io_comm);
+        if (err != MPI_SUCCESS){
+            int error_class, len;
+            char error_string[1024];
+            MPI_Error_class(err, &error_class);
+            MPI_Error_string(error_class, error_string, &len);
+            printf(error_string);
+            io_rank = 0;
+        }
     }
+
     return io_rank;
 }
 
