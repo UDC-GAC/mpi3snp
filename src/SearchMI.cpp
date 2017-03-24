@@ -59,21 +59,6 @@ void *SearchMI::_mpiMI(Options *options, vector<ThreadParams *> threadParams) {
 
     std::vector<std::multiset<Block>> blocks;
     schedule->Get_blocks(mpiRank, &blocks);
-
-    int p = 0;
-    while (p < mpiSize){
-        if (mpiRank == p++){
-            printf("Proceso %i\n", mpiRank);
-            for (auto set = blocks.begin(); set != blocks.end(); set++){
-                for (auto b = set->begin(); b != set->end(); b++){
-                    printf("Bloque x: %i, xlen: %i\n", b->x, b->xlen);
-                }
-            }
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-    ///////////////////////////////// Comparar distribución de los bloques con los de sharedmemschedule!!!
-
     distributor->setSNPBlocks(blocks);
 
     etime = Utils::getSysTime();
