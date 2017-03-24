@@ -7,8 +7,7 @@
 
 #include "SNPDistributor.h"
 
-SNPDistributor::SNPDistributor(Options *options) :
-        b1(NULL), b2(NULL) {
+SNPDistributor::SNPDistributor(Options *options) {
     _options = options;
     _snpSet.reserve(DEFAULT_NUM_SNPS);
 
@@ -30,10 +29,7 @@ SNPDistributor::SNPDistributor(Options *options) :
     _indsClass.reserve(DEFAULT_NUM_INDS);
     _lineReader = new LineReader();
 
-    _moreDouble = true;
-
-    index1 = 0;
-    index2 = 1;
+    cont = true;
 }
 
 SNPDistributor::~SNPDistributor() {
@@ -52,7 +48,7 @@ void SNPDistributor::_loadIndsClass() {
     }
 
     IOMpi::Instance().Cprintf("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", _indsClass.size(),
-                              _indsClass.falseCount(), _indsClass.trueCount());
+               _indsClass.falseCount(), _indsClass.trueCount());
 #ifdef DEBUG
     for(int i=0; i<numInds; i++){
         if(_indsClass[i]){
@@ -84,10 +80,6 @@ void SNPDistributor::loadSNPSet() {
         _snpSet.push_back(readSNP);
     }
 
-    if (!_snpSet.size()) {
-        _moreDouble = false;
-    }
-
 #ifdef DEBUG
     int j;
     uint16_t casesAa, ctrlsAa;
@@ -114,51 +106,51 @@ void SNPDistributor::loadSNPSet() {
 #endif
 }
 
+void SNPDistributor::Update_all_indexes(std::vector<std::multiset<Block>>::iterator it) {
+    auto set = it->begin();
+    i1 = set->x;
+    l1 = set->x + set->xlen;
+    set++;
+    i2 = set->x;
+    i2_save = i2;
+    l2 = set->x + set->xlen;
+
+    diagonal = i1 == i2;
+    if (diagonal){
+        i2++;
+    }
+}
+
 uint32_t SNPDistributor::_getPairsSNPsNoLock(uint32_t *ids) {
-    if (_moreDouble) {
-        uint16_t iter_block = 0;
-        while (iter_block < NUM_PAIRS_BLOCK) {
-            ids[2 * iter_block] = index1;
-            ids[2 * iter_block + 1] = index2;
+    uint16_t iter_block = 0;
+    while (cont){
+        while (i1 < l1){
+            while (i2 < l2){
+                ids[2 * iter_block] = i1;
+                ids[2 * iter_block + 1] = i2;
+                iter_block++;
 
-            iter_block++;
-            // Look for the next pair
-            if (++index2 == index2Lim) {
-                // Update index1 and restart index2
-                index1++;
-                if (isDiagonal) {
-                    if (index1 == index1Lim - 1) {
-                        index1++;
-                    } else {
-                        index2 = index1 + 1;
-                    }
-                } else {
-                    index2 = b2->x;
-                }
+                i2++;
 
-                // Update blockIt based on index1
-                if (index1 == index1Lim) {
-                    if (++block_it != block_list.end()) {
-                        auto set = block_it->begin();
-                        delete b1;
-                        b1 = new Block(set->x, set->xlen);
-                        set++;
-                        delete b2;
-                        b2 = new Block(set->x, set->xlen);
-                        index1 = b1->x;
-                        index1Lim = index1 + b1->xlen;
-                        index2 = b2->x;
-                        index2Lim = index2 + b2->xlen;
-                    } else {
-                        _moreDouble = false;
-                        break;
-                    }
+                if (iter_block >= NUM_PAIRS_BLOCK){
+                    return iter_block;
                 }
             }
+
+            i1++;
+            if (diagonal){
+                i2 = i1 + 1;
+            } else {
+                i2 = i2_save;
+            }
         }
-        return iter_block;
+
+        block_it++;
+        if ((cont = block_it != block_list.end())){
+            Update_all_indexes(block_it);
+        }
     }
-    return 0;
+    return iter_block;
 }
 
 uint32_t SNPDistributor::_getPairsSNPsLock(uint32_t *ids) {

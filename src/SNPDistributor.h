@@ -8,7 +8,6 @@
 #ifndef SNPDISTRIBUTOR_H_
 #define SNPDISTRIBUTOR_H_
 
-#include <set>
 #include "SNP.h"
 #include "Options.h"
 #include "MyFile.h"
@@ -17,6 +16,7 @@
 #include "BoolVector.h"
 #include "Block.h"
 #include "IOMpi.h"
+#include <set>
 
 class SNPDistributor {
 public:
@@ -67,24 +67,8 @@ public:
     inline void setSNPBlocks(std::vector<std::multiset<Block>> block_list) {
         this->block_list = block_list;
         block_it = this->block_list.begin();
-        auto set = block_it->begin();
-        if (b1 != NULL){
-            delete b1;
-        }
-        b1 = new Block(set->x, set->xlen);
-        index1 = b1->x;
-        index1Lim = index1 + b1->xlen;
-        set++;
-        if (b2 != NULL){
-            delete b1;
-        }
-        b2 = new Block(set->x, set->xlen);
-        index2 = b2->x;
-        index2Lim = index2 + b2->xlen;
-
-        isDiagonal = index1 == index2;
-        if (isDiagonal) {
-            index2 = index1 + 1;
+        if ((cont = block_it != this->block_list.end())) {
+            Update_all_indexes(block_it);
         }
     }
 
@@ -109,14 +93,15 @@ private:
 
     uint32_t _getPairsSNPsNoLock(uint32_t *ids);
 
+    void Update_all_indexes(std::vector<std::multiset<Block>>::iterator it);
+
     Options *_options;
     std::vector<SNP *> _snpSet;
     std::vector<std::multiset<Block>> block_list;
-    Block *b1, *b2;
     // Iterators for the SNPs
-    size_t index1, index1Lim, index2, index2Lim;
+    size_t i1, i2, i2_save, l1, l2;
     std::vector<std::multiset<Block>>::iterator block_it;
-    bool isDiagonal;
+    bool diagonal;
 
     // File handler
     MyFilePt _fpTfam;
@@ -126,7 +111,7 @@ private:
     bool _withLock;
 
     // Variables to indicate if there are more analyses to perform
-    bool _moreDouble;
+    bool cont;
 
     // Variables shared among all threads
     pthread_mutex_t _mutex;
