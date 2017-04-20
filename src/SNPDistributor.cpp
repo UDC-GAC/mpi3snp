@@ -9,7 +9,7 @@
 
 SNPDistributor::SNPDistributor(Options *options) {
     _options = options;
-    _snpSet.resize(DEFAULT_NUM_SNPS);
+    _snpSet.reserve(DEFAULT_NUM_SNPS);
 	bv.reserve(DEFAULT_NUM_INDS);
 
     _withLock = (_options->getNumCPUs()) > 1;
@@ -28,8 +28,6 @@ SNPDistributor::SNPDistributor(Options *options) {
     }
 
     _lineReader = new LineReader();
-
-    _numSnp = 0;
 
     _moreDouble = true;
 
@@ -75,25 +73,17 @@ void SNPDistributor::loadSNPSet() {
 
     SNP *readSNP;
 
-    _numSnp = 0;
     while (1) {
         readSNP = new(SNP);
 
-        if (!_lineReader->readTPEDLine(_fpTped, readSNP, _numSnp, bv.size(), &bv[0])) {
+        if (!_lineReader->readTPEDLine(_fpTped, readSNP, _snpSet.size(), bv.size(), &bv[0])) {
             delete readSNP;
             break;
         }
-
-        if (_snpSet.size() <= _numSnp) {
-            _snpSet.resize(_snpSet.size() + DEFAULT_NUM_SNPS);
-        }
-        _snpSet[_numSnp] = readSNP;
-        _numSnp++;
+        _snpSet.push_back(readSNP);
     }
 
-    if (!_numSnp) {
-        _moreDouble = false;
-    }
+    _moreDouble = !_snpSet.empty();
 
 #ifdef DEBUG
     int j;
@@ -139,14 +129,14 @@ uint32_t SNPDistributor::_getPairsSNPsNoLock(uint32_t *ids) {
             iter_block++;
 
             // Look for the next pair
-            if (_iterDoubleSnp2 == _numSnp - 1) {
+            if (_iterDoubleSnp2 == _snpSet.size() - 1) {
                 _iterDoubleSnp1++;
                 _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
             } else {
                 _iterDoubleSnp2++;
             }
 
-            if (_iterDoubleSnp1 == _numSnp - 1) { // We have finished to compute the block
+            if (_iterDoubleSnp1 == _snpSet.size() - 1) { // We have finished to compute the block
                 _moreDouble = false;
                 break;
             }
@@ -177,14 +167,14 @@ uint32_t SNPDistributor::_getPairsSNPsLock(uint32_t *ids) {
             iter_block++;
 
             // Look for the next pair
-            if (_iterDoubleSnp2 == _numSnp - 1) {
+            if (_iterDoubleSnp2 == _snpSet.size() - 1) {
                 _iterDoubleSnp1++;
                 _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
             } else {
                 _iterDoubleSnp2++;
             }
 
-            if (_iterDoubleSnp1 == _numSnp - 1) { // We have finished to compute the block
+            if (_iterDoubleSnp1 == _snpSet.size() - 1) { // We have finished to compute the block
                 _moreDouble = false;
                 break;
             }

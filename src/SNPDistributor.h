@@ -42,7 +42,7 @@ public:
     }
 
     inline uint32_t getNumSnp() {
-        return _numSnp;
+        return _snpSet.size();
     }
 
     inline uint16_t getNumCases() {
@@ -96,9 +96,6 @@ private:
     // Array to keep which values are cases
     // False cases, true controls
     BoolVector bv;
-
-    // To store the dimensions of the problem
-    uint32_t _numSnp;
 
     // Iterators for the SNPs
     uint32_t _iterDoubleSnp1;
