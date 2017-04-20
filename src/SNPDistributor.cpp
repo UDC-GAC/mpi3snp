@@ -148,41 +148,11 @@ uint32_t SNPDistributor::_getPairsSNPsNoLock(uint32_t *ids) {
 }
 
 uint32_t SNPDistributor::_getPairsSNPsLock(uint32_t *ids) {
-
-    uint32_t id1;
-    uint32_t id2;
+    uint16_t iter_block = 0;
 
     _lock();
-
-    if (_moreDouble) {
-        uint16_t iter_block = 0;
-        while (iter_block < NUM_PAIRS_BLOCK) {
-
-            id1 = _iterDoubleSnp1;
-            id2 = _iterDoubleSnp2;
-
-            ids[2 * iter_block] = id1;
-            ids[2 * iter_block + 1] = id2;
-
-            iter_block++;
-
-            // Look for the next pair
-            if (_iterDoubleSnp2 == _snpSet.size() - 1) {
-                _iterDoubleSnp1++;
-                _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
-            } else {
-                _iterDoubleSnp2++;
-            }
-
-            if (_iterDoubleSnp1 == _snpSet.size() - 1) { // We have finished to compute the block
-                _moreDouble = false;
-                break;
-            }
-        }
-
-        _unlock();
-        return iter_block;
-    }
+    iter_block = _getPairsSNPsNoLock(ids);
     _unlock();
-    return 0;
+
+    return iter_block;
 }
