@@ -14,7 +14,7 @@
 
 class Options {
 public:
-    Options(int *argc, char ***argv);
+    Options();
 
     virtual ~Options();
 
@@ -46,24 +46,13 @@ public:
         return _numOutputs;
     }
 
-    inline int *get_argc(){
-        return _c;
-    }
-
-    inline char ***get_argv(){
-        return _v;
-    }
-
     // To parse the command line
-    bool parse();
+    bool parse(int argc, char **argv);
 
     // To print the help for the users
     void printUsage();
 
 private:
-    int *_c;
-    char ***_v;
-
     string _tpedFileName;
     string _tfamFileName;
     string _outFileName;

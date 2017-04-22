@@ -7,11 +7,8 @@
 
 #include "Options.h"
 
-Options::Options(int *argc, char ***argv) {
+Options::Options() {
     _setDefaults();
-
-    _c = argc;
-    _v = argv;
 
     MPI_Comm_size(MPI_COMM_WORLD, &_numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &_processId);
@@ -62,9 +59,7 @@ void Options::_setDefaults() {
     _numOutputs = 10;
 }
 
-bool Options::parse() {
-    int argc = *_c;
-    char **argv = *_v;
+bool Options::parse(int argc, char **argv) {
     int intVal, i, j;
     uint16_t uintVal;
     int argind = 1;
@@ -138,6 +133,7 @@ bool Options::parse() {
         }
     }
 
+    IOMpi::Instance().Mprintf("Number of MPI processes: %d\n", _numProcesses);
     IOMpi::Instance().Mprintf("Number of CPU threads: %d\n", _numThreads);
     IOMpi::Instance().Mprintf("Number of outputs: %hu\n", _numOutputs);
     IOMpi::Instance().Mprintf("Number of pairs by block: %hu\n", NUM_PAIRS_BLOCK);
