@@ -8,6 +8,7 @@
 #ifndef OPTIONS_H_
 #define OPTIONS_H_
 
+#include <mpi.h>
 #include "Utils.h"
 #include "IOMpi.h"
 
@@ -17,8 +18,16 @@ public:
 
     virtual ~Options();
 
-    inline int getNumCPUs() {
-        return _numCPUs;
+    inline int getNumThreads() {
+        return _numThreads;
+    }
+
+    inline int getNumProcesses() {
+        return _numProcesses;
+    }
+
+    inline int getProcessId() {
+        return _processId;
     }
 
     inline string &getTPEDFileName() {
@@ -58,7 +67,9 @@ private:
     string _tpedFileName;
     string _tfamFileName;
     string _outFileName;
-    int _numCPUs;
+    int _numThreads;
+    int _numProcesses;
+    int _processId;
     uint16_t _numOutputs;
 
     /*private member functions*/

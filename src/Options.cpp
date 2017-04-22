@@ -12,6 +12,9 @@ Options::Options(int *argc, char ***argv) {
 
     _c = argc;
     _v = argv;
+
+    MPI_Comm_size(MPI_COMM_WORLD, &_numProcesses);
+    MPI_Comm_rank(MPI_COMM_WORLD, &_processId);
 }
 
 Options::~Options() {
@@ -41,7 +44,7 @@ void Options::printUsage() {
     // Compute
     fprintf(stderr, "Computational options:\n");
     fprintf(stderr, "\t-t <int> (CPU threads for computation, default = %d)\n",
-            _numCPUs);
+            _numThreads);
 
     fprintf(stderr, "\t-no <int> (number of outputs, default = %hu)\n",
             _numOutputs);
@@ -55,7 +58,7 @@ void Options::_setDefaults() {
     _tpedFileName = "";
     _tfamFileName = "";
     _outFileName = "";
-    _numCPUs = 1;
+    _numThreads = 1;
     _numOutputs = 10;
 }
 
@@ -116,7 +119,7 @@ bool Options::parse() {
                     intVal = 1;
 
                 argind++;
-                _numCPUs = intVal;
+                _numThreads = intVal;
             } else {
                 IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
                 return false;
@@ -135,7 +138,7 @@ bool Options::parse() {
         }
     }
 
-    IOMpi::Instance().Mprintf("Number of CPU threads: %d\n", _numCPUs);
+    IOMpi::Instance().Mprintf("Number of CPU threads: %d\n", _numThreads);
     IOMpi::Instance().Mprintf("Number of outputs: %hu\n", _numOutputs);
     IOMpi::Instance().Mprintf("Number of pairs by block: %hu\n", NUM_PAIRS_BLOCK);
 
