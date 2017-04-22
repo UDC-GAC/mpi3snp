@@ -10,7 +10,7 @@
 SNPDistributor::SNPDistributor(Options *options) {
     _options = options;
     _snpSet.reserve(DEFAULT_NUM_SNPS);
-	bv.reserve(DEFAULT_NUM_INDS);
+    bv.reserve(DEFAULT_NUM_INDS);
 
     _withLock = (_options->getNumCPUs()) > 1;
     pthread_mutex_init(&_mutex, NULL);
@@ -71,19 +71,14 @@ void SNPDistributor::loadSNPSet() {
     // Load the information of which individuals are cases and controls
     _loadIndsClass();
 
-    SNP *readSNP;
+    SNP *readSNP = new(SNP);
 
-    while (1) {
-        readSNP = new(SNP);
-
-        if (!_lineReader->readTPEDLine(_fpTped, readSNP, _snpSet.size(), bv.size(), &bv[0])) {
-            delete readSNP;
-            break;
-        }
+    while (_lineReader->readTPEDLine(_fpTped, readSNP, _snpSet.size(), bv.size(), &bv[0])) {
         _snpSet.push_back(readSNP);
+        readSNP = new(SNP);
     }
-
     _moreDouble = !_snpSet.empty();
+    delete readSNP;
 
 #ifdef DEBUG
     int j;
