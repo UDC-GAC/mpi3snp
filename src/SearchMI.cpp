@@ -6,13 +6,12 @@
  */
 
 #include "SearchMI.h"
-#include "IOMpi.h"
 
 SearchMI::SearchMI(Options *options) : Search(options) {
-    _engines.resize(options->getNumCPUs());
-    _threadParams.resize(options->getNumCPUs());
+    _engines.resize(options->getNumThreads());
+    _threadParams.resize(options->getNumThreads());
 
-    for (int tid = 0; tid < options->getNumCPUs(); ++tid) {
+    for (int tid = 0; tid < options->getNumThreads(); ++tid) {
         _engines[tid] = new Engine(options);
         // Create parameters for CPU threads
         _threadParams[tid] = new ThreadParams(tid, _engines[tid]);
@@ -33,16 +32,25 @@ void SearchMI::execute() {
     double stime = Utils::getSysTime();
     double etime;
 
+    int proc_id, num_proc;
+    MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
+
+    // Declaration of MPI Datatypes
+    MPI_Datatype MPI_MUTUAL_INFO;
+    MPI_Type_contiguous(sizeof(MutualInfo), MPI_CHAR, &MPI_MUTUAL_INFO);
+    MPI_Type_commit(&MPI_MUTUAL_INFO);
+
     SNPDistributor *distributor = new SNPDistributor(_options);
     distributor->loadSNPSet();
 
     etime = Utils::getSysTime();
     IOMpi::Instance().Cprintf("Loaded %ld SNPs in %.2f seconds\n", distributor->getNumSnp(), etime - stime);
 
-    vector<pthread_t> threadIDs(_options->getNumCPUs(), 0);
+    vector<pthread_t> threadIDs(_options->getNumThreads(), 0);
 
     // Computation of the single-SNP entropy
-    for (int tid = 0; tid < _options->getNumCPUs(); tid++) {
+    for (int tid = 0; tid < _options->getNumThreads(); tid++) {
         // All threads use the same distributor so it gives them the correct pair of SNPs
         _threadParams[tid]->init(distributor, _options->getNumOutputs());
 
@@ -52,19 +60,37 @@ void SearchMI::execute() {
         }
     }
 
-    MutualInfo *auxMutualInfo = new MutualInfo[_options->getNumCPUs() * _options->getNumOutputs()];
+    MutualInfo *auxMutualInfo;
+    if (proc_id == 0) { // Master
+        auxMutualInfo = new MutualInfo[num_proc * _options->getNumThreads() * _options->getNumOutputs()];
+    } else {
+        auxMutualInfo = new MutualInfo[_options->getNumThreads() * _options->getNumOutputs()];
+    }
 
     // Wait for the completion of all threads
-    for (int tid = 0; tid < _options->getNumCPUs(); tid++) {
+    for (int tid = 0; tid < _options->getNumThreads(); tid++) {
         pthread_join(threadIDs[tid], NULL);
         memcpy(&auxMutualInfo[tid * _options->getNumOutputs()], _threadParams[tid]->_mutualInfo,
                _options->getNumOutputs() * sizeof(MutualInfo));
     }
 
-    // Sort the auxiliar array and print the results
-    std::sort(auxMutualInfo, auxMutualInfo + _options->getNumOutputs() * _options->getNumCPUs());
-    distributor->printMI(auxMutualInfo + _options->getNumOutputs() * (_options->getNumCPUs() - 1),
-                         _options->getNumOutputs());
+    // Gather all the results on the master process and print output
+    if (proc_id == 0) {
+        for (int rank = 1; rank < num_proc; rank++) {
+            MPI_Recv(&auxMutualInfo[rank * _options->getNumThreads() * _options->getNumOutputs()],
+                     _options->getNumThreads() * _options->getNumOutputs(), MPI_MUTUAL_INFO, rank, 123,
+                     MPI_COMM_WORLD,
+                     NULL);
+        }
+
+        // Sort the auxiliar array and print the results
+        std::sort(auxMutualInfo, auxMutualInfo + _options->getNumOutputs() * _options->getNumThreads() * num_proc);
+        distributor->printMI(auxMutualInfo + _options->getNumOutputs() * (_options->getNumThreads() * num_proc - 1),
+                             _options->getNumOutputs());
+    } else {
+        MPI_Send(auxMutualInfo, _options->getNumThreads() * _options->getNumOutputs(), MPI_MUTUAL_INFO, 0, 123,
+                 MPI_COMM_WORLD);
+    }
 
     IOMpi::Instance().Cprintf("3-SNP analysis finalized\n");
 
@@ -79,6 +105,7 @@ void SearchMI::execute() {
 #endif
 
     // Release the distributor
+    MPI_Type_free(&MPI_MUTUAL_INFO);
     delete distributor;
     delete[] auxMutualInfo;
     threadIDs.clear();
@@ -136,8 +163,8 @@ void *SearchMI::_threadMI(void *arg) {
 
 #ifdef BENCHMARKING
     etime = Utils::getSysTime();
-    IOMpi::Instance().Cprintf("CPU thread (%d) %f seconds calculating %lu analysis\n",
-                              params->_tid, etime - stime, myTotalAnal);
+//    IOMpi::Instance().Cprintf("CPU thread (%d) %f seconds calculating %lu analysis\n",
+//                              params->_tid, etime - stime, myTotalAnal);
 #endif
 
     delete[] auxIds;
