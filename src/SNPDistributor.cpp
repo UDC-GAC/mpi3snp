@@ -12,7 +12,7 @@ SNPDistributor::SNPDistributor(Options *options) {
     _snpSet.reserve(DEFAULT_NUM_SNPS);
     bv.reserve(DEFAULT_NUM_INDS);
 
-    _withLock = (_options->getNumCPUs()) > 1;
+    _withLock = (_options->getNumThreads()) > 1;
     pthread_mutex_init(&_mutex, NULL);
 
     if ((_fpOut = myfopen(options->getOutFileName().c_str(), "wb")) == NULL) {
@@ -31,8 +31,11 @@ SNPDistributor::SNPDistributor(Options *options) {
 
     _moreDouble = true;
 
-    _iterDoubleSnp1 = 0;
-    _iterDoubleSnp2 = 1;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
+    MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
+
+    _iterDoubleSnp1 = _options->getProcessId();
+    _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
 }
 
 SNPDistributor::~SNPDistributor() {
@@ -120,7 +123,8 @@ uint32_t SNPDistributor::_getPairsSNPsNoLock(uint32_t *ids) {
             if (iter_block == NUM_PAIRS_BLOCK) {
                 return iter_block;
             } else {
-                _iterDoubleSnp2 = ++_iterDoubleSnp1 + 1;
+                _iterDoubleSnp1 += _options->getNumProcesses();
+                _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
             }
         }
         _moreDouble = false;

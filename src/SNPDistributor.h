@@ -8,6 +8,7 @@
 #ifndef SNPDISTRIBUTOR_H_
 #define SNPDISTRIBUTOR_H_
 
+#include <mpi.h>
 #include "SNP.h"
 #include "Options.h"
 #include "MyFile.h"
@@ -96,6 +97,8 @@ private:
     // Array to keep which values are cases
     // False cases, true controls
     BoolVector bv;
+
+    int num_proc, proc_id;
 
     // Iterators for the SNPs
     uint32_t _iterDoubleSnp1;
