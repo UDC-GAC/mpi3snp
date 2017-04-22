@@ -9,10 +9,10 @@ int main(int argc, char *argv[]) {
     /*get the startup time*/
     stime = MPI_Wtime();
 
-    Options *options = new Options(&argc, &argv);
+    Options *options = new Options();
 
     /*parse the arguments*/
-    if (!options->parse()) {
+    if (!options->parse(argc, argv)) {
         options->printUsage();
         return 0;
     }
