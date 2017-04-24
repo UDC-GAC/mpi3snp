@@ -92,16 +92,16 @@ void SearchMI::execute() {
                  MPI_COMM_WORLD);
     }
 
-    IOMpi::Instance().Cprintf("3-SNP analysis finalized\n");
-
-#ifdef DEBUG
+#ifdef BENCHMARKING
     uint32_t numAnalyzed = 0;
 
-    for(int tid=0; tid<_options->getNumCPUs(); tid++){
+    for(int tid=0; tid<_options->getNumThreads(); tid++){
+        IOMpi::Instance().Cprintf("CPU thread (%d) %f seconds calculating %lu analysis\n",
+                tid, _threadParams[tid]->_runtime, _threadParams[tid]->_numAnalyzed);
         numAnalyzed+=_threadParams[tid]->_numAnalyzed;
     }
 
-    Utils::log("Total analysis: %" PRIu64 "\n", numAnalyzed);
+    IOMpi::Instance().Cprintf("Total analysis: %" PRIu64 "\n", numAnalyzed);
 #endif
 
     // Release the distributor
@@ -114,7 +114,7 @@ void SearchMI::execute() {
 void *SearchMI::_threadMI(void *arg) {
     ThreadParams *params = (ThreadParams *) arg;
 
-    Engine *engine = (Engine *) params->_engine;
+    Engine *engine = params->_engine;
 
     SNPDistributor *distributor = params->_distributor;
     uint32_t numSnp = distributor->getNumSnp();
@@ -138,13 +138,8 @@ void *SearchMI::_threadMI(void *arg) {
 
     bool moreAnal = true;
     uint64_t myTotalAnal = 0;
-
     uint64_t numPairsBlock = 0;
-
-#ifdef BENCHMARKING
     double stime = Utils::getSysTime();
-    double etime;
-#endif
 
     while (moreAnal) {
         // Take some SNPs
@@ -159,13 +154,8 @@ void *SearchMI::_threadMI(void *arg) {
     }
 
     params->_numAnalyzed = myTotalAnal;
+    params->_runtime = Utils::getSysTime() - stime;
     memcpy(params->_mutualInfo, mutualInfo, numOutputs * sizeof(MutualInfo));
-
-#ifdef BENCHMARKING
-    etime = Utils::getSysTime();
-//    IOMpi::Instance().Cprintf("CPU thread (%d) %f seconds calculating %lu analysis\n",
-//                              params->_tid, etime - stime, myTotalAnal);
-#endif
 
     delete[] auxIds;
     delete[] mutualInfo;
