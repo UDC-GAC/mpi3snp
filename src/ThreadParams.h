@@ -13,37 +13,36 @@
 #include "Engine.h"
 #include "MutualInfo.h"
 
-struct ThreadParams
-{
-	ThreadParams(int tid, Engine* engine){
-		_tid = tid;
-		_distributor = NULL;
-		_engine = engine;
-		_numOutputs = 0;
-		_numAnalyzed = 0;
-		_mutualInfo = NULL;
-	}
+struct ThreadParams {
+    ThreadParams(int tid, Engine *engine) {
+        _tid = tid;
+        _distributor = NULL;
+        _engine = engine;
+        _numOutputs = 0;
+        _numAnalyzed = 0;
+        _mutualInfo = NULL;
+        _runtime = 0;
+    }
 
-	~ThreadParams()
-	{
-		delete _mutualInfo;
-	}
+    ~ThreadParams() {
+        delete _mutualInfo;
+    }
 
-	inline void init(SNPDistributor* distributor, uint16_t numOutputs)
-	{
-		_distributor = distributor;
-		_numOutputs = numOutputs;
-		_mutualInfo = new MutualInfo[numOutputs];
-	}
+    inline void init(SNPDistributor *distributor, uint16_t numOutputs) {
+        _distributor = distributor;
+        _numOutputs = numOutputs;
+        _mutualInfo = new MutualInfo[numOutputs];
+    }
 
-	int _tid;
-	SNPDistributor* _distributor;
-	Engine* _engine;
+    int _tid;
+    SNPDistributor *_distributor;
+    Engine *_engine;
 
-	// Values for the return information
-	uint16_t _numOutputs;
-	uint64_t _numAnalyzed;
-	MutualInfo* _mutualInfo;
+    // Values for the return information
+    uint16_t _numOutputs;
+    uint64_t _numAnalyzed;
+    MutualInfo *_mutualInfo;
+    double _runtime;
 };
 
 
