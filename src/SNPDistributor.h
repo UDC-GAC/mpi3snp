@@ -98,9 +98,9 @@ private:
     // False cases, true controls
     BoolVector bv;
 
-    int num_proc, proc_id;
-
     // Iterators for the SNPs
+    int dist_size, dist_it;
+    uint32_t *dist = NULL;
     uint32_t _iterDoubleSnp1;
     uint32_t _iterDoubleSnp2;
 };

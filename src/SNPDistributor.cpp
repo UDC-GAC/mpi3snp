@@ -30,16 +30,12 @@ SNPDistributor::SNPDistributor(Options *options) {
     _lineReader = new LineReader();
 
     _moreDouble = true;
-
-    MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
-    MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
-
-    _iterDoubleSnp1 = _options->getProcessId();
-    _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
 }
 
 SNPDistributor::~SNPDistributor() {
-
+    if (dist != NULL){
+        delete[] dist;
+    }
     myfclose(_fpTfam);
     myfclose(_fpTped);
     myfclose(_fpOut);
@@ -68,7 +64,6 @@ void SNPDistributor::_loadIndsClass() {
 }
 
 void SNPDistributor::loadSNPSet() {
-
     // Load the information of which individuals are cases and controls
     _loadIndsClass();
 
@@ -80,6 +75,19 @@ void SNPDistributor::loadSNPSet() {
     }
     _moreDouble = !_snpSet.empty();
     delete readSNP;
+
+    dist_size = _snpSet.size() / _options->getNumProcesses() +
+            (_options->getProcessId() < (_snpSet.size() % _options->getNumProcesses()));
+    dist = new uint32_t[dist_size];
+    dist[0] = _options->getProcessId();
+    dist[1] = 2 * _options->getNumProcesses() - _options->getProcessId() - 1;
+    for (int i = 2; i < dist_size; i++) {
+        dist[i] = dist[i - 2] + 2 * _options->getNumProcesses();
+    }
+
+    dist_it = 0;
+    _iterDoubleSnp1 = dist[dist_it++];
+    _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
 
 #ifdef DEBUG
     int j;
@@ -111,7 +119,7 @@ uint32_t SNPDistributor::_getPairsSNPsNoLock(uint32_t *ids) {
     uint16_t iter_block = 0;
 
     if (_moreDouble) {
-        while (_iterDoubleSnp1 < _snpSet.size()) {
+        while (dist_it < dist_size) {
             while (_iterDoubleSnp2 < _snpSet.size() && iter_block < NUM_PAIRS_BLOCK) {
                 ids[2 * iter_block] = _iterDoubleSnp1;
                 ids[2 * iter_block + 1] = _iterDoubleSnp2++;
@@ -121,7 +129,7 @@ uint32_t SNPDistributor::_getPairsSNPsNoLock(uint32_t *ids) {
             if (iter_block == NUM_PAIRS_BLOCK) {
                 return iter_block;
             } else {
-                _iterDoubleSnp1 += _options->getNumProcesses();
+                _iterDoubleSnp1 = dist[dist_it++];
                 _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
             }
         }
