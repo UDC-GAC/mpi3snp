@@ -45,7 +45,9 @@ void SearchMI::execute() {
     distributor->loadSNPSet();
 
     etime = Utils::getSysTime();
-    IOMpi::Instance().Cprintf("Loaded %ld SNPs in %.2f seconds\n", distributor->getNumSnp(), etime - stime);
+    IOMpi::Instance().Cprintf("Loaded %ld SNPs (%ld/%ld cases/controls) in %.2f seconds\n",
+                              distributor->getNumSnp(), distributor->getNumCases(), distributor->getNumCtrls(),
+                              etime - stime);
 
     vector<pthread_t> threadIDs(_options->getNumThreads(), 0);
 
