@@ -47,15 +47,13 @@ SNPDistributor::~SNPDistributor() {
 
 void SNPDistributor::_loadIndsClass() {
     // Load the information from a TFAM file about the cases and controls
-    int numInds = 0;
     int retValue;
 
-    while ((retValue = _lineReader->readTFAMLine(_fpTfam, numInds)) >= 0) {
+    while ((retValue = _lineReader->readTFAMLine(_fpTfam, _snpSet.size())) >= 0) {
         bv.push_back(retValue);
     }
 
-
-    printf("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", numInds, getNumCases(), getNumCtrls());
+    //printf("Loaded information of %ld individuals (%ld/%ld cases/controls)\n", numInds, getNumCases(), getNumCtrls());
 #ifdef DEBUG
     for(int i=0; i<numInds; i++){
         if(_indsClass[i]){
