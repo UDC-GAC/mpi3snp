@@ -10,7 +10,6 @@
 
 #include "Options.h"
 #include "GPUContTable.h"
-#include "GPUVariables.h"
 #include "MutualInfo.h"
 #include "float.h"
 
