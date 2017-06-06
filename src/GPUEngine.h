@@ -12,61 +12,35 @@
 #include "GPUContTable.h"
 #include "MutualInfo.h"
 #include "float.h"
+#include "EntropySearch.h"
 
 class GPUEngine {
 public:
-	GPUEngine(Options *options);
-	virtual ~GPUEngine();
+    inline GPUEngine(Options *options, int gpuId, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
+                     uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases,
+                     uint32_t *host0Ctrls, uint32_t *host1Ctrls, uint32_t *host2Ctrls) {
+        _gpuInfo = GPUInfo::getGPUInfo();
+        _gpuId = options->getGPUId(gpuId);
+        // Set GPU device
+        _gpuInfo->setDevice(_gpuId);
 
-	void setNums(uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls);
+        entropySearch = new EntropySearch(options->isMI(), numSNPs, numCases, numCtrls, options->getNumOutputs(),
+                                          host0Cases, host1Cases, host2Cases, host0Ctrls, host1Ctrls, host2Ctrls);
+    }
 
-	// Initialize the engine
-	void initialize(int gpuId);
+    inline ~GPUEngine() {
+        delete entropySearch;
+    }
 
-	void loadSNPs(uint32_t* host0Cases, uint32_t* host1Cases, uint32_t* host2Cases,
-			uint32_t* host0Ctrls, uint32_t* host1Ctrls, uint32_t* host2Ctrls);
-
-	void mutualInfo(uint64_t numPairs, uint2* ids, MutualInfo* mutualInfo,
-			float& minMI, uint16_t& minMIPos, uint16_t& numEntriesWithMI);
-
-	inline uint16_t getGPUId(){
-		return _gpuId;
-	}
+    inline void mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutualInfo, float &minMI, uint16_t &minMIPos,
+                           uint16_t &numEntriesWithMI) {
+        entropySearch->mutualInfo(numPairs, ids, mutualInfo, minMI, minMIPos, numEntriesWithMI);
+    }
 
 private:
-
-	void _findNHighestMI(MutualInfo* mutualInfo, uint64_t numTotal,
-		float& minMI, uint16_t& minMIPos,uint16_t& numEntriesWithMI);
-
-	Options* _options;
-	GPUInfo* _gpuInfo;
-	uint16_t _gpuId;
-
-	uint32_t _numSNPs;
-	uint16_t _numCases;
-	uint16_t _numCtrls;
-	uint16_t _numEntriesCase;
-	uint16_t _numEntriesCtrl;
-
-	uint32_t* _dev0Cases;
-	uint32_t* _dev1Cases;
-	uint32_t* _dev2Cases;
-	uint32_t* _dev0Ctrls;
-	uint32_t* _dev1Ctrls;
-	uint32_t* _dev2Ctrls;
-	uint2* _devIds;
-
-	// Auxiliary array for the contingency tables between the two kernels
-	GPUDoubleContTable* _devDoubleTables;
-	GPUDoubleContTable *_tables;
-
-	// Auxiliary array to store the MI values of each block
-	float *_devMIValues;
-	float *_hostMIValues;
-
-	// Auxiliary arrays to store the ids that are in the list of MIs
-	uint3 *_devMiIds;
-	uint3 *_hostMiIds;
+    GPUInfo *_gpuInfo;
+    uint16_t _gpuId;
+    EntropySearch *entropySearch;
 };
 
 #endif /* GPUENGINE_H_ */
