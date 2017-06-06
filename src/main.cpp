@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     /*parse the arguments*/
     if (!options.parse(argc, argv)) {
         options.printUsage();
-        return 0;
+        MPI_Abort(MPI_COMM_WORLD, 0);
     }
 
     Search *search = new GPUSearchMI(&options);
