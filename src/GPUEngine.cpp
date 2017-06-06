@@ -12,6 +12,11 @@
 #include <float.h>
 
 GPUEngine::GPUEngine(Options *options) {
+    /*check the availability of GPUs*/
+    if (GPUInfo::getGPUInfo()->getNumGPUs() == 0) {
+        Utils::exit("No compatible GPUs are available in your machine\n");
+    }
+
     if (options->isHeteroGPUs()) {
         distributor = new GPUSNPDistributorStatic(options);
     } else {
@@ -19,8 +24,11 @@ GPUEngine::GPUEngine(Options *options) {
     }
     num_gpus = options->getNumGPUs();
     gpu_id = new int[num_gpus];
-    for (int i=0; i<num_gpus; i++){
+    for (int i = 0; i < num_gpus; i++) {
         gpu_id[i] = options->getGPUId(i);
+        if ((gpu_id[i] < 0) || (gpu_id[i] >= num_gpus)) {
+            Utils::exit("value %d not valid for GPU index\n", gpu_id[i]);
+        }
     }
     is_mi = options->isMI();
     num_outputs = options->getNumOutputs();
@@ -92,10 +100,10 @@ void *GPUEngine::handle(void *arg) {
     GPUInfo::getGPUInfo()->setDevice(gpu_id);
 
     EntropySearch *search = new EntropySearch(isMI, distributor->getNumSnp(), distributor->getNumCases(),
-                                                distributor->getNumCtrls(), num_outputs,
-                                                distributor->getHost0Cases(), distributor->getHost1Cases(),
-                                                distributor->getHost2Cases(), distributor->getHost0Ctrls(),
-                                                distributor->getHost1Ctrls(), distributor->getHost2Ctrls());
+                                              distributor->getNumCtrls(), num_outputs,
+                                              distributor->getHost0Cases(), distributor->getHost1Cases(),
+                                              distributor->getHost2Cases(), distributor->getHost0Ctrls(),
+                                              distributor->getHost1Ctrls(), distributor->getHost2Ctrls());
 
     uint2 *auxIds;
     cudaMallocHost(&auxIds, NUM_PAIRS_BLOCK * sizeof(uint2));
