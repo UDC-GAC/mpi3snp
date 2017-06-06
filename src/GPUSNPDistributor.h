@@ -13,6 +13,7 @@
 #include "MyFile.h"
 #include "LineReader.h"
 #include "MutualInfo.h"
+#include <cuda_runtime.h>
 
 class GPUSNPDistributor {
 public:
