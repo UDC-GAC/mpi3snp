@@ -13,39 +13,32 @@
 #include "GPUEngine.h"
 #include "MutualInfo.h"
 
-struct ThreadParams
-{
-	ThreadParams(int tid, GPUEngine* engine, bool dynamicDist){
-		_tid = tid;
-		_distributor = NULL;
-		_engine = engine;
-		_numOutputs = 0;
-		_numAnalyzed = 0;
-		_mutualInfo = NULL;
-		_dynamicDist = dynamicDist;
-	}
+struct ThreadParams {
+    ThreadParams(int tid, uint16_t numOutputs, GPUSNPDistributor *distributor, int gpu_id, bool isMI) {
+        _tid = tid;
+        _numOutputs = numOutputs;
+        _distributor = distributor;
+        _gpu = gpu_id;
+        _isMI = isMI;
 
-	~ThreadParams()
-	{
-		delete [] _mutualInfo;
-	}
+        _numAnalyzed = 0;
+        _mutualInfo = new MutualInfo[numOutputs];
+    }
 
-	inline void init(GPUSNPDistributor* distributor, uint16_t numOutputs)
-	{
-		_distributor = distributor;
-		_numOutputs = numOutputs;
-		_mutualInfo = new MutualInfo[numOutputs];
-	}
+    ~ThreadParams() {
+        delete[] _mutualInfo;
+    }
 
-	int _tid;
-	GPUSNPDistributor* _distributor;
-	GPUEngine* _engine;
+    // Parameters
+    int _tid;
+    uint16_t _numOutputs;
+    GPUSNPDistributor *_distributor;
+    int _gpu;
+    bool _isMI;
 
-	// Values for the return information
-	uint16_t _numOutputs;
-	uint64_t _numAnalyzed;
-	MutualInfo* _mutualInfo;
-	bool _dynamicDist;
+    // Return values
+    MutualInfo *_mutualInfo;
+    uint64_t _numAnalyzed;
 };
 
 
