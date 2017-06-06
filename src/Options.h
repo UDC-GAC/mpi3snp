@@ -7,69 +7,72 @@
 
 #ifndef OPTIONS_H_
 #define OPTIONS_H_
-#include "GPUMacros.h"
+
+#include <cstdint>
 
 class Options {
 public:
-	Options();
-	Options(int argc, char* argv[]);
-	virtual ~Options();
+    Options();
 
-	inline int getNumGPUs() {
-		return _numGPUs;
-	}
+    Options(int argc, char *argv[]);
 
-	inline uint16_t getGPUId(int id){
+    virtual ~Options();
 
-		if(id <= _numGPUs){
-			return _GPUIds[id];
-		}
+    inline int getNumGPUs() {
+        return _numGPUs;
+    }
 
-		return _GPUIds[0];
-	}
+    inline uint16_t getGPUId(int id) {
 
-	inline string& getTPEDFileName() {
-		return _tpedFileName;
-	}
+        if (id <= _numGPUs) {
+            return _GPUIds[id];
+        }
 
-	inline string& getTFAMFileName(){
-		return _tfamFileName;
-	}
+        return _GPUIds[0];
+    }
 
-	inline string& getOutFileName() {
-		return _outFileName;
-	}
+    inline char *&getTPEDFileName() {
+        return _tpedFileName;
+    }
 
-	inline uint16_t getNumOutputs(){
-		return _numOutputs;
-	}
+    inline char *&getTFAMFileName() {
+        return _tfamFileName;
+    }
 
-	inline bool isHeteroGPUs(){
-		return _heteroGPUs;
-	}
+    inline char *&getOutFileName() {
+        return _outFileName;
+    }
 
-	inline bool isMI(){
-		return _filterMI;
-	}
+    inline uint16_t getNumOutputs() {
+        return _numOutputs;
+    }
 
-	// To parse the command line
-	bool parse(int argc, char* argv[]);
+    inline bool isHeteroGPUs() {
+        return _heteroGPUs;
+    }
 
-	// To print the help for the users
-	void printUsage();
+    inline bool isMI() {
+        return _filterMI;
+    }
+
+    // To parse the command line
+    bool parse(int argc, char *argv[]);
+
+    // To print the help for the users
+    void printUsage();
 
 private:
-	string _tpedFileName;
-	string _tfamFileName;
-	string _outFileName;
-	int _numGPUs;
-	uint16_t* _GPUIds;
-	uint16_t _numOutputs;
-	bool _heteroGPUs;
-	bool _filterMI;
+    char *_tpedFileName;
+    char *_tfamFileName;
+    char *_outFileName;
+    int _numGPUs;
+    uint16_t *_GPUIds;
+    uint16_t _numOutputs;
+    bool _heteroGPUs;
+    bool _filterMI;
 
-	/*private member functions*/
-	void _setDefaults();
+    /*private member functions*/
+    void _setDefaults();
 };
 
 #endif /* OPTIONS_H_ */

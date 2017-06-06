@@ -6,6 +6,8 @@
  */
 
 #include "Options.h"
+#include "Macros.h"
+#include "Utils.h"
 
 Options::Options() {
 	_setDefaults();
@@ -103,12 +105,6 @@ bool Options::parse(int argc, char* argv[]) {
 	}
 	fputc('\n', stderr);
 
-	/*check the availability of GPUs*/
-	GPUInfo *gpuInfo = GPUInfo::getGPUInfo();
-	if (gpuInfo->getNumGPUs() == 0) {
-		Utils::exit("No compatible GPUs are available in your machine\n");
-	}
-
 	// For the other options
 	while (argind < argc) {
 		// Input file
@@ -164,10 +160,6 @@ bool Options::parse(int argc, char* argv[]) {
 			for(i=0; i<_numGPUs; i++){
 				if (argind < argc) {
 					sscanf(argv[argind], "%d", &intVal);
-					if ((intVal < 0) || (intVal>=gpuInfo->getNumGPUs())){
-						Utils::log("value %d not valid for GPU index\n", intVal);
-						return false;
-					}
 					for(j=0; j<i; j++){
 						if(_GPUIds[j] == intVal){
 							Utils::log("repeating GPU indexes not allowed\n");
@@ -230,12 +222,12 @@ bool Options::parse(int argc, char* argv[]) {
 		}
 	}
 
-	if(!strcmp(_tfamFileName.c_str(), "") || !strcmp(_tpedFileName.c_str(), "")){
+	if(!strcmp(_tfamFileName, "") || !strcmp(_tpedFileName, "")){
 		Utils::log("Input files not specified!!!\n");
 		return false;
 	}
 
-	if(!strcmp(_outFileName.c_str(), "")){
+	if(!strcmp(_outFileName, "")){
 		Utils::log("Output file not specified!!!\n");
 		return false;
 	}
