@@ -10,6 +10,7 @@
 #include "GPUContTable.h"
 
 class EntropySearch {
+public:
     EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls, uint16_t numOutputs,
                   uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases, uint32_t *host0Ctrls,
                   uint32_t *host1Ctrls, uint32_t *host2Ctrls);
@@ -48,26 +49,6 @@ private:
     // Auxiliary arrays to store the ids that are in the list of MIs
     uint3 *_devMiIds;
     uint3 *_hostMiIds;
-
-    static __global__ void _kernelDoubleTable(uint64_t numPairs, uint32_t numSNPs,
-                                              uint16_t numEntriesCases, uint16_t numEntriesCtrls, uint2 *devIds,
-                                              uint32_t *dev0Cases, uint32_t *dev1Cases, uint32_t *dev2Cases,
-                                              uint32_t *dev0Ctrls, uint32_t *dev1Ctrls, uint32_t *dev2Ctrls,
-                                              GPUDoubleContTable *doubleTables);
-
-    static __global__ void _kernelTripleMI(uint64_t numPairs, uint32_t numSNPs,
-                                           uint16_t numEntriesCases, uint16_t numEntriesCtrls, uint2 *devIds,
-                                           uint32_t *dev0Cases, uint32_t *dev1Cases, uint32_t *dev2Cases,
-                                           uint32_t *dev0Ctrls, uint32_t *dev1Ctrls, uint32_t *dev2Ctrls,
-                                           GPUDoubleContTable *devDoubleTables, uint16_t numOutputs,
-                                           float *devMIValues, uint3 *devMiIds);
-
-    static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
-                                           uint16_t numEntriesCases, uint16_t numEntriesCtrls, uint2 *devIds,
-                                           uint32_t *dev0Cases, uint32_t *dev1Cases, uint32_t *dev2Cases,
-                                           uint32_t *dev0Ctrls, uint32_t *dev1Ctrls, uint32_t *dev2Ctrls,
-                                           GPUDoubleContTable *devDoubleTables, uint16_t numOutputs,
-                                           float *devMIValues, uint3 *devMiIds);
 
     void _findNHighestMI(MutualInfo *mutualInfo, uint64_t totalValues, float &minMI, uint16_t &minMIPos,
                          uint16_t &numEntriesWithMI);
