@@ -1,3 +1,4 @@
+#include "Utils.h"
 #include "GPUSearchMI.h"
 
 int main(int argc, char* argv[])
