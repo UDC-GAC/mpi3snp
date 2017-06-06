@@ -8,7 +8,8 @@ find_package(MPI REQUIRED)
 find_package(CUDA REQUIRED)
 
 # Falta cambiar archivos
-set(MPI3SNP_c++_files src/main.cpp src/Options.cpp src/Search.cpp src/GPUSearchMI.cpp src/LineReader.cpp src/Utils.cpp)
+set(MPI3SNP_c++_files src/main.cpp src/Options.cpp src/Search.cpp src/GPUSearchMI.cpp src/LineReader.cpp src/Utils.cpp
+        src/IOMpi.cpp)
 set(MPI3SNP_cuda_files src/EntropySearch.cu src/GPUEngine.cpp src/GPUMacros.cpp src/GPUSNPDistributor.cpp
         src/GPUSNPDistributorStatic.cpp)
 
