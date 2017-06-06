@@ -6,7 +6,7 @@
  */
 
 #ifndef GPUSNPDISTRIBUTOR_H_
-#define SNPDISTRIBUTOR_H_
+#define GPUSNPDISTRIBUTOR_H_
 
 #include "SNP.h"
 #include "Options.h"
