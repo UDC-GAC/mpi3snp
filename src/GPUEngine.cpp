@@ -86,7 +86,6 @@ void GPUEngine::run() {
 #endif
 
     // Release the distributor
-    delete distributor;
     delete[] auxMutualInfo;
 }
 
