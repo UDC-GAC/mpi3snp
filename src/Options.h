@@ -31,6 +31,14 @@ public:
         return _GPUIds[0];
     }
 
+    inline int getNumProcesses() {
+        return _numProcesses;
+    }
+
+    inline int getProcessId() {
+        return _processId;
+    }
+
     inline char *&getTPEDFileName() {
         return _tpedFileName;
     }
@@ -66,6 +74,8 @@ private:
     char *_tfamFileName;
     char *_outFileName;
     int _numGPUs;
+    int _numProcesses;
+    int _processId;
     uint16_t *_GPUIds;
     uint16_t _numOutputs;
     bool _heteroGPUs;
