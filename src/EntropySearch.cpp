@@ -38,6 +38,15 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     cudaMemcpyToSymbol(_MAX_FLOAT, &maxFL, sizeof(float), 0, cudaMemcpyHostToDevice);
     myCheckCudaError;
 
+    cudaMallocHost(&_tables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable));
+    myCheckCudaError;
+
+    cudaMallocHost(&_hostMIValues, NUM_PAIRS_BLOCK * _numOutputs * sizeof(float));
+    myCheckCudaError;
+
+    cudaMallocHost(&_hostMiIds, NUM_PAIRS_BLOCK * _numOutputs * sizeof(uint3));
+    myCheckCudaError;
+
     for (int i = 0; i < NUM_PAIRS_BLOCK; i++) {
         _tables[i].initialize(_numEntriesCase, _numEntriesCtrl);
     }
@@ -59,7 +68,7 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     cudaMalloc(&_dev2Ctrls, _numEntriesCtrl * _numSNPs * sizeof(uint32_t));
     myCheckCudaError;
 
-// All the entries are cyclicly ordered by SNPs
+    // All the entries are cyclicly ordered by SNPs
     cudaMemcpy(_dev0Cases, host0Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice);
     myCheckCudaError;
     cudaMemcpy(_dev1Cases, host1Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice);
@@ -71,6 +80,30 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     cudaMemcpy(_dev1Ctrls, host1Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice);
     myCheckCudaError;
     cudaMemcpy(_dev2Ctrls, host2Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice);
+    myCheckCudaError;
+
+    // Increase the size of the L1 compared to shared memory
+    cudaFuncSetCacheConfig(_kernelDoubleTable, cudaFuncCachePreferL1);
+    myCheckCudaError;
+
+    // Increase the size of the shared memory compared to L1
+    cudaFuncSetCacheConfig(_kernelTripleMI, cudaFuncCachePreferShared);
+    myCheckCudaError;
+
+    // Increase the size of the shared memory compared to L1
+    cudaFuncSetCacheConfig(_kernelTripleIG, cudaFuncCachePreferShared);
+    myCheckCudaError;
+
+    cudaMalloc(&_devIds, NUM_PAIRS_BLOCK * sizeof(uint2));
+    myCheckCudaError;
+
+    cudaMalloc(&_devDoubleTables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable));
+    myCheckCudaError;
+
+    cudaMalloc(&_devMIValues, NUM_PAIRS_BLOCK * _options->getNumOutputs() * sizeof(float));
+    myCheckCudaError;
+
+    cudaMalloc(&_devMiIds, NUM_PAIRS_BLOCK * _options->getNumOutputs() * sizeof(uint3));
     myCheckCudaError;
 }
 
@@ -154,17 +187,6 @@ void EntropySearch::mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutual
             _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
             _devDoubleTables);
     myCheckCudaError;
-
-    /*_kernelDoubleMI<<<gridDouble, blocksDouble, 0>>>(numPairs, _numEntriesCase, _numEntriesCtrl,
-			_devIds, _devDoubleTables, _devMIValues, _devMiIds);
-	myCheckCudaError;
-
-	cudaMemcpy(_hostMIValues, _devMIValues, numPairs*sizeof(float),  cudaMemcpyDeviceToHost);
-	myCheckCudaError;
-	cudaMemcpy(_hostMiIds, _devMiIds, numPairs*sizeof(uint3),  cudaMemcpyDeviceToHost);
-	myCheckCudaError;
-
-	_findNHighestMI(mutualInfo, numPairs, minMI, minMIPos, numEntriesWithMI);*/
 
     // Now you need to calculate the MI for each triple
     // Each block performs all the triples for one pair
