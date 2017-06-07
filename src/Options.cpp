@@ -28,10 +28,6 @@ Options::Options(int argc, char *argv[]) {
 
 Options::~Options() {
 
-    if (_GPUIds) {
-        delete[] _GPUIds;
-    }
-
 }
 
 void Options::printUsage() {
@@ -56,8 +52,6 @@ void Options::printUsage() {
 
     // Compute
     fprintf(stderr, "Computational options:\n");
-    fprintf(stderr, "\t-t <int> (number of GPUs for computation, default = %d)\n",
-            _numGPUs);
 
     fprintf(stderr,
             "\t-g <int> [int] ... (index of the GPUs. There must be the same number of values as GPUs indicated with -t. Default = %d)\n",
@@ -82,11 +76,6 @@ void Options::_setDefaults() {
     _tpedFileName = "";
     _tfamFileName = "";
     _outFileName = "";
-    _numGPUs = 1;
-
-    _GPUIds = new uint16_t[1];
-    _GPUIds[0] = 0;
-
     _numOutputs = 10;
     _heteroGPUs = false;
     _filterMI = true;
@@ -145,40 +134,16 @@ bool Options::parse(int argc, char *argv[]) {
                 IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
                 return false;
             }
-        } else if (!strcmp(argv[argind], "-t")) {
-            intVal = 1;
-            argind++;
-            if (argind < argc) {
-                sscanf(argv[argind], "%d", &intVal);
-                if (intVal < 1)
-                    intVal = 1;
-
-                argind++;
-                _numGPUs = intVal;
-                delete[] _GPUIds;
-                _GPUIds = new uint16_t[_numGPUs];
-            } else {
-                IOMpi::Instance().Mprintf("not specify value for the parameter %s\n", argv[argind - 1]);
-                return false;
-            }
         } else if (!strcmp(argv[argind], "-g")) {
-            argind++;
-            for (i = 0; i < _numGPUs; i++) {
-                if (argind < argc) {
-                    sscanf(argv[argind], "%d", &intVal);
-                    for (j = 0; j < i; j++) {
-                        if (_GPUIds[j] == intVal) {
-                            IOMpi::Instance().Mprintf("repeating GPU indexes not allowed\n");
-                            return false;
-                        }
-                    }
-                    _GPUIds[i] = intVal;
-                } else {
-                    IOMpi::Instance().Mprintf("not specify enough values for the parameter -g\n");
-                    return false;
+            char *p;
+            do {
+                std::strtoul(argv[++argind], &p, 10);
+                printf("\"%s\"\n", argv[argind]);
+                if (*p == 0) {
+                    printf("it\n");
+                    _GPUIds.push_back(std::atoi(argv[argind]));
                 }
-                argind++;
-            }
+            } while (*p == 0);
         } else if (!strcmp(argv[argind], "-no")) {
             uintVal = 1;
             argind++;
@@ -199,6 +164,9 @@ bool Options::parse(int argc, char *argv[]) {
         } else if (!strcmp(argv[argind], "-mi")) {
             _filterMI = true;
             argind++;
+        } else {
+            IOMpi::Instance().Mprintf("Unrecognized parameter %s\n", argv[argind]);
+            MPI_Abort(MPI_COMM_WORLD, 0);
         }
     }
 
@@ -207,14 +175,13 @@ bool Options::parse(int argc, char *argv[]) {
     } else {
         IOMpi::Instance().Mprintf("Applying Information Gain\n");
     }
-    IOMpi::Instance().Mprintf("Number of GPUs: %d\n", _numGPUs);
-    IOMpi::Instance().Mprintf("GPU index:");
-    for (i = 0; i < _numGPUs; i++) {
-        IOMpi::Instance().Mprintf(" %d", _GPUIds[i]);
+    IOMpi::Instance().Mprintf("GPU indices:");
+    for (auto it = _GPUIds.begin(); it < _GPUIds.end(); it++) {
+        IOMpi::Instance().Mprintf(" %d", *it);
     }
     IOMpi::Instance().Mprintf("\nNumber of outputs: %hu\n", _numOutputs);
     IOMpi::Instance().Mprintf("Number of pairs by block: %lu\n", NUM_PAIRS_BLOCK);
-    if (_numGPUs > 1) {
+    if (_GPUIds.size() > 1) {
         if (_heteroGPUs) {
             IOMpi::Instance().Mprintf("Dynamic distribution among GPUs\n");
         } else {

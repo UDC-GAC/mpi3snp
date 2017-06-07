@@ -9,6 +9,7 @@
 #define OPTIONS_H_
 
 #include <cstdint>
+#include <vector>
 
 class Options {
 public:
@@ -18,17 +19,8 @@ public:
 
     virtual ~Options();
 
-    inline int getNumGPUs() {
-        return _numGPUs;
-    }
-
-    inline uint16_t getGPUId(int id) {
-
-        if (id <= _numGPUs) {
-            return _GPUIds[id];
-        }
-
-        return _GPUIds[0];
+    inline std::vector<uint16_t> Get_GPU_Ids() {
+        return _GPUIds;
     }
 
     inline int getNumProcesses() {
@@ -73,10 +65,9 @@ private:
     char *_tpedFileName;
     char *_tfamFileName;
     char *_outFileName;
-    int _numGPUs;
     int _numProcesses;
     int _processId;
-    uint16_t *_GPUIds;
+    std::vector<uint16_t> _GPUIds;
     uint16_t _numOutputs;
     bool _heteroGPUs;
     bool _filterMI;
