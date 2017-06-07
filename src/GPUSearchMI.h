@@ -9,14 +9,19 @@
 #define GPUSEARCHMI_H_
 
 #include "Search.h"
+#include <mpi.h>
 
 class GPUSearchMI : public Search {
 public:
-	GPUSearchMI(Options* options);
-	virtual ~GPUSearchMI();
+    GPUSearchMI(Options *options);
 
-	// Execute the epistasis search
-	void execute();
+    virtual ~GPUSearchMI();
+
+    // Execute the epistasis search
+    void execute();
+
+private:
+    MPI_Datatype MPI_MUTUAL_INFO;
 };
 
 #endif /* GPUSEARCHMI_H_ */
