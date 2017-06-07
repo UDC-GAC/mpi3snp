@@ -39,7 +39,7 @@ GPUEngine::~GPUEngine() {
     delete[] gpu_id;
 }
 
-void GPUEngine::run() {
+void GPUEngine::run(std::vector<MutualInfo> *mutual_info) {
     double stime = Utils::getSysTime();
     double etime;
 
@@ -71,7 +71,8 @@ void GPUEngine::run() {
 
     // Sort the auxiliar array and print the results
     std::sort(auxMutualInfo, auxMutualInfo + num_outputs * num_gpus);
-    distributor->printMI(auxMutualInfo + num_outputs * (num_gpus - 1), num_outputs);
+    mutual_info->resize(num_outputs);
+    memcpy(&(*mutual_info)[0], auxMutualInfo + num_outputs * (num_gpus - 1), sizeof(MutualInfo) * num_outputs);
 
     Utils::log("3-SNP analysis finalized\n");
 

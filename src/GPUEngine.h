@@ -17,14 +17,14 @@ public:
 
     ~GPUEngine();
 
-    void run();
+    void run(std::vector<MutualInfo> *mutual_info);
 
 private:
     GPUSNPDistributor *distributor;
     uint16_t _gpuId;
-    int num_gpus;
+    unsigned int num_gpus;
     int *gpu_id;
-    int num_outputs;
+    uint16_t num_outputs;
     bool is_mi;
 
     static void *handle(void *arg);
