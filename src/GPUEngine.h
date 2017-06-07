@@ -21,9 +21,7 @@ public:
 
 private:
     GPUSNPDistributor *distributor;
-    uint16_t _gpuId;
-    unsigned int num_gpus;
-    int *gpu_id;
+    std::vector<uint16_t> gpu_ids;
     uint16_t num_outputs;
     bool is_mi;
 

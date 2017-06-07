@@ -22,21 +22,13 @@ GPUEngine::GPUEngine(Options *options) {
     } else {
         distributor = new GPUSNPDistributor(options);
     }
-    num_gpus = options->getNumGPUs();
-    gpu_id = new int[num_gpus];
-    for (int i = 0; i < num_gpus; i++) {
-        gpu_id[i] = options->getGPUId(i);
-        if ((gpu_id[i] < 0) || (gpu_id[i] >= num_gpus)) {
-            Utils::exit("value %d not valid for GPU index\n", gpu_id[i]);
-        }
-    }
+    gpu_ids = options->Get_GPU_Ids();
     is_mi = options->isMI();
     num_outputs = options->getNumOutputs();
 }
 
 GPUEngine::~GPUEngine() {
     delete distributor;
-    delete[] gpu_id;
 }
 
 void GPUEngine::run(std::vector<MutualInfo> *mutual_info) {
@@ -48,21 +40,21 @@ void GPUEngine::run(std::vector<MutualInfo> *mutual_info) {
     etime = Utils::getSysTime();
     Utils::log("Loaded %ld SNPs in %.2f seconds\n", distributor->getNumSnp(), etime - stime);
 
-    vector<pthread_t> threadIDs(num_gpus, 0);
-    vector<ThreadParams *> threadParams(num_gpus);
-    for (int tid = 0; tid < num_gpus; tid++) {
+    vector<pthread_t> threadIDs(gpu_ids.size(), 0);
+    vector<ThreadParams *> threadParams(gpu_ids.size());
+    for (int tid = 0; tid < gpu_ids.size(); tid++) {
         // Create parameters for CPU threads
-        threadParams[tid] = new ThreadParams(tid, num_outputs, distributor, gpu_id[tid], is_mi);
+        threadParams[tid] = new ThreadParams(tid, num_outputs, distributor, gpu_ids[tid], is_mi);
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, handle, threadParams[tid]) != 0) {
             Utils::exit("Thread creating failed\n");
         }
     }
 
-    MutualInfo *auxMutualInfo = new MutualInfo[num_gpus * num_outputs];
+    MutualInfo *auxMutualInfo = new MutualInfo[gpu_ids.size() * num_outputs];
 
     // Wait for the completion of all threads
-    for (int tid = 0; tid < num_gpus; tid++) {
+    for (int tid = 0; tid < gpu_ids.size(); tid++) {
         pthread_join(threadIDs[tid], NULL);
         memcpy(&auxMutualInfo[tid * num_outputs], threadParams[tid]->_mutualInfo,
                num_outputs * sizeof(MutualInfo));
@@ -70,9 +62,9 @@ void GPUEngine::run(std::vector<MutualInfo> *mutual_info) {
     }
 
     // Sort the auxiliar array and print the results
-    std::sort(auxMutualInfo, auxMutualInfo + num_outputs * num_gpus);
+    std::sort(auxMutualInfo, auxMutualInfo + num_outputs * gpu_ids.size());
     mutual_info->resize(num_outputs);
-    memcpy(&(*mutual_info)[0], auxMutualInfo + num_outputs * (num_gpus - 1), sizeof(MutualInfo) * num_outputs);
+    memcpy(&(*mutual_info)[0], auxMutualInfo + num_outputs * (gpu_ids.size() - 1), sizeof(MutualInfo) * num_outputs);
 
     Utils::log("3-SNP analysis finalized\n");
 
