@@ -158,6 +158,8 @@ private:
 	pthread_mutex_t _mutex;
 
 	// Iterators for the SNPs
+	int dist_size, dist_it;
+	uint32_t *dist = NULL;
 	uint32_t _iterDoubleSnp1;
 	uint32_t _iterDoubleSnp2;
 };

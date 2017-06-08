@@ -12,7 +12,7 @@ GPUSNPDistributor::GPUSNPDistributor(Options *options) {
     _options = options;
     _snpSet.resize(DEFAULT_NUM_SNPS);
 
-    _withLock = (_options->getNumGPUs()) > 1;
+    _withLock = (_options->Get_GPU_Ids().size()) > 1;
     pthread_mutex_init(&_mutex, NULL);
 
     if ((_fpOut = myfopen(options->getOutFileName(), "wb")) == NULL) {
@@ -39,10 +39,7 @@ GPUSNPDistributor::GPUSNPDistributor(Options *options) {
 
     _moreDouble = true;
 
-    _iterDoubleSnp1 = 0;
-    _iterDoubleSnp2 = 1;
-
-    if (_options->getNumGPUs() > 0) {
+    if (_options->Get_GPU_Ids().size() > 0) {
         _sizeArrCase = DEFAULT_NUM_INDS * DEFAULT_NUM_SNPS / 32;
         _sizeArrCtrl = DEFAULT_NUM_INDS * DEFAULT_NUM_SNPS / 32;
 
@@ -92,6 +89,10 @@ GPUSNPDistributor::~GPUSNPDistributor() {
     if (_host2Ctrls) {
         cudaFreeHost(_host2Ctrls);
         myCheckCudaError;
+    }
+
+    if (dist != NULL){
+        delete[] dist;
     }
 }
 
@@ -250,6 +251,19 @@ void GPUSNPDistributor::loadSNPSet() {
     if (_numSnp) {
         _moreDouble = true;
     }
+
+    dist_size = _numSnp / _options->getNumProcesses() +
+                (_options->getProcessId() < (_numSnp % _options->getNumProcesses()));
+    dist = new uint32_t[dist_size];
+    dist[0] = _options->getProcessId();
+    dist[1] = 2 * _options->getNumProcesses() - _options->getProcessId() - 1;
+    for (int i = 2; i < dist_size; i++) {
+        dist[i] = dist[i - 2] + 2 * _options->getNumProcesses();
+    }
+
+    dist_it = 0;
+    _iterDoubleSnp1 = dist[dist_it++];
+    _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
 }
 
 void GPUSNPDistributor::_resizeHostArrCase(size_t nsize) {
@@ -358,41 +372,28 @@ void GPUSNPDistributor::_resizeHostArrCtrl(size_t nsize) {
 }
 
 uint32_t GPUSNPDistributor::_getPairsSNPsNoLock(uint2 *ids, uint64_t &totalAnal) {
-
-    uint32_t id1;
-    uint32_t id2;
+    uint16_t iter_block = 0;
 
     if (_moreDouble) {
-        uint16_t iter_block = 0;
-        while (iter_block < NUM_PAIRS_BLOCK) {
-
-            id1 = _iterDoubleSnp1;
-            id2 = _iterDoubleSnp2;
-
-            totalAnal += _numSnp - _iterDoubleSnp2 - 1;
-
-            ids[iter_block].x = id1;
-            ids[iter_block].y = id2;
-
-            iter_block++;
-
-            // Look for the next pair
-            if (_iterDoubleSnp2 == _numSnp - 2) {
-                _iterDoubleSnp1++;
-                _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
-            } else {
-                _iterDoubleSnp2++;
+        while (dist_it < dist_size) {
+            while (_iterDoubleSnp2 < _numSnp - 1 && iter_block < NUM_PAIRS_BLOCK) {
+                totalAnal += _numSnp - _iterDoubleSnp2 - 1;
+                ids[iter_block].x = _iterDoubleSnp1;
+                ids[iter_block].y = _iterDoubleSnp2++;
+                iter_block++;
             }
 
-            if (_iterDoubleSnp1 == _numSnp - 2) { // We have finished to compute the block
-                _moreDouble = false;
-                break;
+            if (iter_block == NUM_PAIRS_BLOCK) {
+                return iter_block;
+            } else {
+                _iterDoubleSnp1 = dist[dist_it++];
+                _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
             }
         }
-
-        return iter_block;
+        _moreDouble = false;
     }
-    return 0;
+
+    return iter_block;
 }
 
 uint32_t GPUSNPDistributor::_getPairsSNPsLock(uint2 *ids, uint64_t &totalAnal) {
