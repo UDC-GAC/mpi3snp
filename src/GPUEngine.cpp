@@ -17,11 +17,12 @@ GPUEngine::GPUEngine(Options *options) {
         Utils::exit("No compatible GPUs are available in your machine\n");
     }
 
-    if (options->isHeteroGPUs()) {
-        distributor = new GPUSNPDistributorStatic(options);
-    } else {
-        distributor = new GPUSNPDistributor(options);
-    }
+//    if (options->isHeteroGPUs()) {
+//        distributor = new GPUSNPDistributorStatic(options);
+//    } else {
+//        distributor = new GPUSNPDistributor(options);
+//    }
+    distributor = new GPUSNPDistributor(options);
     gpu_ids = options->Get_GPU_Ids();
     is_mi = options->isMI();
     num_outputs = options->getNumOutputs();
