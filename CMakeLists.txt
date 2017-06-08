@@ -11,7 +11,8 @@ find_package(CUDA REQUIRED)
 set(MPI3SNP_c++_files src/main.cpp src/Options.cpp src/Search.cpp src/GPUSearchMI.cpp src/LineReader.cpp src/Utils.cpp
         src/IOMpi.cpp)
 set(MPI3SNP_cuda_files src/EntropySearch.cu src/GPUEngine.cpp src/GPUMacros.cpp src/GPUSNPDistributor.cpp
-        src/GPUSNPDistributorStatic.cpp)
+        )
+#src/GPUSNPDistributorStatic.cpp
 
 include_directories(${MPI_CXX_INCLUDE_PATH})
 add_library(cpp_objs OBJECT ${MPI3SNP_c++_files})
