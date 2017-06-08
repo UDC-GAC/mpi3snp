@@ -396,43 +396,11 @@ uint32_t GPUSNPDistributor::_getPairsSNPsNoLock(uint2 *ids, uint64_t &totalAnal)
 }
 
 uint32_t GPUSNPDistributor::_getPairsSNPsLock(uint2 *ids, uint64_t &totalAnal) {
-
-    uint32_t id1;
-    uint32_t id2;
+    uint32_t iter_block = 0;
 
     _lock();
-
-    if (_moreDouble) {
-        uint16_t iter_block = 0;
-        while (iter_block < NUM_PAIRS_BLOCK) {
-
-            id1 = _iterDoubleSnp1;
-            id2 = _iterDoubleSnp2;
-
-            totalAnal += _numSnp - _iterDoubleSnp2 - 1;
-
-            ids[iter_block].x = id1;
-            ids[iter_block].y = id2;
-
-            iter_block++;
-
-            // Look for the next pair
-            if (_iterDoubleSnp2 == _numSnp - 2) {
-                _iterDoubleSnp1++;
-                _iterDoubleSnp2 = _iterDoubleSnp1 + 1;
-            } else {
-                _iterDoubleSnp2++;
-            }
-
-            if (_iterDoubleSnp1 == _numSnp - 2) { // We have finished to compute the block
-                _moreDouble = false;
-                break;
-            }
-        }
-
-        _unlock();
-        return iter_block;
-    }
+    iter_block = _getPairsSNPsNoLock(ids, totalAnal);
     _unlock();
-    return 0;
+
+    return iter_block;
 }
