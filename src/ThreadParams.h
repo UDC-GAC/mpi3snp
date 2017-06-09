@@ -14,14 +14,14 @@
 #include "MutualInfo.h"
 
 struct ThreadParams {
-    ThreadParams(int tid, uint16_t numOutputs, GPUSNPDistributor *distributor, int gpu_id, bool isMI) {
+    ThreadParams(int tid, uint16_t numOutputs, GPUSNPDistributor *distributor, int gpu_id, bool isMI,
+                 Statistics &stats) : statistics(stats) {
         _tid = tid;
         _numOutputs = numOutputs;
         _distributor = distributor;
         _gpu = gpu_id;
         _isMI = isMI;
 
-        _numAnalyzed = 0;
         _mutualInfo = new MutualInfo[numOutputs];
     }
 
@@ -37,8 +37,8 @@ struct ThreadParams {
     bool _isMI;
 
     // Return values
+    Statistics &statistics;
     MutualInfo *_mutualInfo;
-    uint64_t _numAnalyzed;
 };
 
 
