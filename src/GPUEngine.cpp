@@ -6,7 +6,6 @@
  */
 
 #include "GPUEngine.h"
-#include "GPUSNPDistributorStatic.h"
 #include "ThreadParams.h"
 #include "EntropySearch.h"
 #include <float.h>
@@ -32,20 +31,17 @@ GPUEngine::~GPUEngine() {
     delete distributor;
 }
 
-void GPUEngine::run(std::vector<MutualInfo> *mutual_info) {
-    double stime = Utils::getSysTime();
-    double etime;
-
+void GPUEngine::run(std::vector<MutualInfo> &mutual_info, Statistics &statistics) {
+    std::string snp_load_label("SNPs load time");
+    statistics.Begin_timer(snp_load_label);
     distributor->loadSNPSet();
-
-    etime = Utils::getSysTime();
-    Utils::log("Loaded %ld SNPs in %.2f seconds\n", distributor->getNumSnp(), etime - stime);
+    statistics.End_timer(snp_load_label);
 
     vector<pthread_t> threadIDs(gpu_ids.size(), 0);
     vector<ThreadParams *> threadParams(gpu_ids.size());
     for (int tid = 0; tid < gpu_ids.size(); tid++) {
         // Create parameters for CPU threads
-        threadParams[tid] = new ThreadParams(tid, num_outputs, distributor, gpu_ids[tid], is_mi);
+        threadParams[tid] = new ThreadParams(tid, num_outputs, distributor, gpu_ids[tid], is_mi, statistics);
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, handle, threadParams[tid]) != 0) {
             Utils::exit("Thread creating failed\n");
@@ -64,10 +60,9 @@ void GPUEngine::run(std::vector<MutualInfo> *mutual_info) {
 
     // Sort the auxiliar array and print the results
     std::sort(auxMutualInfo, auxMutualInfo + num_outputs * gpu_ids.size());
-    mutual_info->resize(num_outputs);
-    memcpy(&(*mutual_info)[0], auxMutualInfo + num_outputs * (gpu_ids.size() - 1), sizeof(MutualInfo) * num_outputs);
+    mutual_info.resize(num_outputs);
+    memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (gpu_ids.size() - 1), sizeof(MutualInfo) * num_outputs);
 
-    Utils::log("3-SNP analysis finalized\n");
 
 #ifdef DEBUG
     uint32_t numAnalyzed = 0;
@@ -89,6 +84,7 @@ void *GPUEngine::handle(void *arg) {
     uint16_t num_outputs = params->_numOutputs;
     int gpu_id = params->_gpu;
     bool isMI = params->_isMI;
+    Statistics &statistics = params->statistics;
 
     GPUInfo::getGPUInfo()->setDevice(gpu_id);
 
@@ -116,8 +112,12 @@ void *GPUEngine::handle(void *arg) {
     uint64_t numPairsBlock = 0;
 
 #ifdef BENCHMARKING
-    double stime = Utils::getSysTime();
-    double etime;
+    std::string timer_label;
+    timer_label += "GPU " + std::to_string(gpu_id) + " runtime";
+    std::string analysis_label;
+    analysis_label += "GPU " + std::to_string(gpu_id) + " analysis";
+
+    statistics.Begin_timer(timer_label);
 #endif
 
     while (moreAnal) {
@@ -133,12 +133,10 @@ void *GPUEngine::handle(void *arg) {
 
 #ifdef BENCHMARKING
     cudaDeviceSynchronize();
-    etime = Utils::getSysTime();
-    Utils::log("GPU thread (%d) %f seconds calculating %lu analysis\n",
-               params->_tid, etime - stime, myTotalAnal);
-#endif
 
-    params->_numAnalyzed = myTotalAnal;
+    statistics.End_timer(timer_label);
+    statistics.Add_value(analysis_label, myTotalAnal);
+#endif
 
     cudaFreeHost(auxIds);
     myCheckCudaError;

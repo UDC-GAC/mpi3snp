@@ -10,6 +10,7 @@
 
 #include "Options.h"
 #include "GPUSNPDistributor.h"
+#include "Statistics.h"
 
 class GPUEngine {
 public:
@@ -17,7 +18,7 @@ public:
 
     ~GPUEngine();
 
-    void run(std::vector<MutualInfo> *mutual_info);
+    void run(std::vector<MutualInfo> &mutual_info, Statistics &statistics);
 
 private:
     GPUSNPDistributor *distributor;
