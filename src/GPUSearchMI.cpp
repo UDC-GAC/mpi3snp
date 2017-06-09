@@ -24,9 +24,10 @@ void GPUSearchMI::execute() {
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
 
     std::vector<MutualInfo> mutual_info;
+    Statistics statistics;
 
     GPUEngine gpu_engine(_options);
-    gpu_engine.run(&mutual_info);
+    gpu_engine.run(mutual_info, statistics);
 
     if (proc_id == 0) {
         // Gather all the results
@@ -48,7 +49,7 @@ void GPUSearchMI::execute() {
         LineReader lr;
         std::vector<MutualInfo>::reverse_iterator it;
         int count;
-        for (it = mutual_info.rbegin(), count = 0; count<_options->getNumOutputs(); it++, count++){
+        for (it = mutual_info.rbegin(), count = 0; count < _options->getNumOutputs(); it++, count++) {
             lr.printMI(out, it->_id1, it->_id2, it->_id3, it->_mutualInfoValue);
         }
         myfclose(out);
@@ -56,4 +57,19 @@ void GPUSearchMI::execute() {
         // Send results to master
         MPI_Send(&mutual_info[0], _options->getNumOutputs(), MPI_MUTUAL_INFO, 0, 123, MPI_COMM_WORLD);
     }
+
+    IOMpi::Instance().Cprintf("3-SNP analysis finalized\n");
+
+    // Print runtime statistics to stdout
+    auto timers = statistics.Get_all_timers();
+    std::string output("Statistics\n");
+    for (auto it = timers.begin(); it < timers.end(); it++) {
+        output += "\t" + it->first + ": " + std::to_string(it->second) + " seconds\n";
+    }
+    auto values = statistics.Get_all_values();
+    for (auto it = values.begin(); it < values.end(); it++){
+        output += "\t" + it->first + ": " + std::to_string(it->second) + "\n";
+    }
+    IOMpi::Instance().Cprintf(output.c_str());
+
 }
