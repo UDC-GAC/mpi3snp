@@ -138,9 +138,7 @@ bool Options::parse(int argc, char *argv[]) {
             char *p;
             do {
                 std::strtoul(argv[++argind], &p, 10);
-                printf("\"%s\"\n", argv[argind]);
                 if (*p == 0) {
-                    printf("it\n");
                     _GPUIds.push_back(std::atoi(argv[argind]));
                 }
             } while (*p == 0);
