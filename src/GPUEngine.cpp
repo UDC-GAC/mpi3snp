@@ -10,21 +10,24 @@
 #include "EntropySearch.h"
 #include <float.h>
 
-GPUEngine::GPUEngine(Options *options) {
+GPUEngine::GPUEngine(std::string tped, std::string tfam, int proc_num, int proc_id, std::vector<unsigned int> gpu_ids,
+                     uint16_t num_outputs, bool use_mi) {
     /*check the availability of GPUs*/
     if (GPUInfo::getGPUInfo()->getNumGPUs() == 0) {
         Utils::exit("No compatible GPUs are available in your machine\n");
     }
+
+    // GPU detection and id setting here!
 
 //    if (options->isHeteroGPUs()) {
 //        distributor = new GPUSNPDistributorStatic(options);
 //    } else {
 //        distributor = new GPUSNPDistributor(options);
 //    }
-    distributor = new GPUSNPDistributor(options);
-    gpu_ids = options->Get_GPU_Ids();
-    is_mi = options->isMI();
-    num_outputs = options->getNumOutputs();
+    distributor = new GPUSNPDistributor(tfam, tped, proc_num, gpu_ids.size(), proc_id);
+    this->gpu_ids = gpu_ids;
+    this->use_mi = use_mi;
+    this->num_outputs = num_outputs;
 }
 
 GPUEngine::~GPUEngine() {
@@ -41,7 +44,7 @@ void GPUEngine::run(std::vector<MutualInfo> &mutual_info, Statistics &statistics
     vector<ThreadParams *> threadParams(gpu_ids.size());
     for (int tid = 0; tid < gpu_ids.size(); tid++) {
         // Create parameters for CPU threads
-        threadParams[tid] = new ThreadParams(tid, num_outputs, distributor, gpu_ids[tid], is_mi, statistics);
+        threadParams[tid] = new ThreadParams(tid, num_outputs, distributor, gpu_ids[tid], use_mi, statistics);
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, handle, threadParams[tid]) != 0) {
             Utils::exit("Thread creating failed\n");
@@ -82,7 +85,7 @@ void *GPUEngine::handle(void *arg) {
     ThreadParams *params = (ThreadParams *) arg;
     GPUSNPDistributor *distributor = params->_distributor;
     uint16_t num_outputs = params->_numOutputs;
-    int gpu_id = params->_gpu;
+    unsigned int gpu_id = params->_gpu;
     bool isMI = params->_isMI;
     Statistics &statistics = params->statistics;
 

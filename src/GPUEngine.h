@@ -8,13 +8,13 @@
 #ifndef GPUENGINE_H_
 #define GPUENGINE_H_
 
-#include "Options.h"
 #include "GPUSNPDistributor.h"
 #include "Statistics.h"
 
 class GPUEngine {
 public:
-    GPUEngine(Options *options);
+    GPUEngine(std::string tped, std::string tfam, int proc_num, int proc_id, std::vector<unsigned int> gpu_ids,
+              uint16_t num_outputs, bool use_mi);
 
     ~GPUEngine();
 
@@ -22,9 +22,9 @@ public:
 
 private:
     GPUSNPDistributor *distributor;
-    std::vector<uint16_t> gpu_ids;
+    std::vector<unsigned int> gpu_ids;
     uint16_t num_outputs;
-    bool is_mi;
+    bool use_mi;
 
     static void *handle(void *arg);
 };
