@@ -8,23 +8,21 @@
 #include "GPUSNPDistributor.h"
 #include "GPUMacros.h"
 
-GPUSNPDistributor::GPUSNPDistributor(Options *options) {
-    _options = options;
+GPUSNPDistributor::GPUSNPDistributor(std::string tfam, std::string tped, int proc_num, unsigned int gpu_num,
+                                     int proc_id) {
+    this->proc_num = proc_num;
+    this->proc_id = proc_id;
     _snpSet.resize(DEFAULT_NUM_SNPS);
 
-    _withLock = (_options->Get_GPU_Ids().size()) > 1;
+    _withLock = (gpu_num) > 1;
     pthread_mutex_init(&_mutex, NULL);
 
-    if ((_fpOut = myfopen(options->getOutFileName(), "wb")) == NULL) {
-        Utils::exit("Out file: file %s could not be opened\n", options->getOutFileName());
+    if ((_fpTfam = myfopen(tfam.c_str(), "r")) == NULL) {
+        Utils::exit("TFAM file: file %s could not be opened\n", tfam.c_str());
     }
 
-    if ((_fpTfam = myfopen(options->getTFAMFileName(), "r")) == NULL) {
-        Utils::exit("TFAM file: file %s could not be opened\n", options->getTFAMFileName());
-    }
-
-    if ((_fpTped = myfopen(options->getTPEDFileName(), "r")) == NULL) {
-        Utils::exit("TPED file: file %s could not be opened\n", options->getTPEDFileName());
+    if ((_fpTped = myfopen(tped.c_str(), "r")) == NULL) {
+        Utils::exit("TPED file: file %s could not be opened\n", tped.c_str());
     }
 
     _indsClass = new bool[DEFAULT_NUM_INDS];
@@ -39,7 +37,7 @@ GPUSNPDistributor::GPUSNPDistributor(Options *options) {
 
     _moreDouble = true;
 
-    if (_options->Get_GPU_Ids().size() > 0) {
+    if (gpu_num > 0) {
         _sizeArrCase = DEFAULT_NUM_INDS * DEFAULT_NUM_SNPS / 32;
         _sizeArrCtrl = DEFAULT_NUM_INDS * DEFAULT_NUM_SNPS / 32;
 
@@ -62,7 +60,6 @@ GPUSNPDistributor::~GPUSNPDistributor() {
 
     myfclose(_fpTfam);
     myfclose(_fpTped);
-    myfclose(_fpOut);
 
     delete _lineReader;
 
@@ -91,7 +88,7 @@ GPUSNPDistributor::~GPUSNPDistributor() {
         myCheckCudaError;
     }
 
-    if (dist != NULL){
+    if (dist != NULL) {
         delete[] dist;
     }
 }
@@ -252,13 +249,13 @@ void GPUSNPDistributor::loadSNPSet() {
         _moreDouble = true;
     }
 
-    dist_size = _numSnp / _options->getNumProcesses() +
-                (_options->getProcessId() < (_numSnp % _options->getNumProcesses()));
+    dist_size = _numSnp / proc_num +
+                (proc_id < (_numSnp % proc_num));
     dist = new uint32_t[dist_size];
-    dist[0] = _options->getProcessId();
-    dist[1] = 2 * _options->getNumProcesses() - _options->getProcessId() - 1;
+    dist[0] = proc_id;
+    dist[1] = 2 * proc_num - proc_id - 1;
     for (int i = 2; i < dist_size; i++) {
-        dist[i] = dist[i - 2] + 2 * _options->getNumProcesses();
+        dist[i] = dist[i - 2] + 2 * proc_num;
     }
 
     dist_it = 0;
