@@ -9,7 +9,6 @@
 #define THREADPARAMS_H_
 
 #include "Macros.h"
-#include "GPUSNPDistributorStatic.h"
 #include "GPUEngine.h"
 #include "MutualInfo.h"
 
@@ -33,7 +32,7 @@ struct ThreadParams {
     int _tid;
     uint16_t _numOutputs;
     GPUSNPDistributor *_distributor;
-    int _gpu;
+    unsigned int _gpu;
     bool _isMI;
 
     // Return values
