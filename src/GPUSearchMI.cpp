@@ -8,6 +8,7 @@
 #include "GPUSearchMI.h"
 #include "GPUEngine.h"
 #include "IOMpi.h"
+#include "Dataset.h"
 
 GPUSearchMI::Builder::Builder(std::string tped_file, std::string tfam_file, std::string out_file) {
     search_obj = new GPUSearchMI();
@@ -54,50 +55,53 @@ void GPUSearchMI::execute() {
     std::vector<MutualInfo> mutual_info;
     Statistics statistics;
 
-    GPUEngine gpu_engine(tped_file, tfam_file, num_proc, proc_id, gpu_ids, num_outputs, use_mi);
-    gpu_engine.run(mutual_info, statistics);
+    try {
+        GPUEngine gpu_engine(tped_file, tfam_file, num_proc, proc_id, gpu_ids, num_outputs, use_mi);
+        gpu_engine.run(mutual_info, statistics);
 
-    if (proc_id == 0) {
-        // Gather all the results
-        std::vector<MutualInfo> buff(num_outputs);
-        for (int rank = 1; rank < num_proc; rank++) {
-            MPI_Recv(&buff[0], num_outputs, MPI_MUTUAL_INFO, rank, 123, MPI_COMM_WORLD, NULL);
-            mutual_info.insert(mutual_info.end(), buff.begin(), buff.end());
+        if (proc_id == 0) {
+            // Gather all the results
+            std::vector<MutualInfo> buff(num_outputs);
+            for (int rank = 1; rank < num_proc; rank++) {
+                MPI_Recv(&buff[0], num_outputs, MPI_MUTUAL_INFO, rank, 123, MPI_COMM_WORLD, NULL);
+                mutual_info.insert(mutual_info.end(), buff.begin(), buff.end());
+            }
+
+            // Sort the result
+            std::sort(&mutual_info[0], &mutual_info[num_proc * num_outputs]);
+
+            // Write results to the output file
+            MyFilePt out = myfopen(out_file.c_str(), "wb");
+            if (out == NULL) {
+                IOMpi::Instance().Mprintf("Out file: file %s could not be opened\n", out_file.c_str());
+                return;
+            }
+            LineReader lr;
+            std::vector<MutualInfo>::reverse_iterator it;
+            int count;
+            for (it = mutual_info.rbegin(), count = 0; count < num_outputs; it++, count++) {
+                lr.printMI(out, it->_id1, it->_id2, it->_id3, it->_mutualInfoValue);
+            }
+            myfclose(out);
+        } else {
+            // Send results to master
+            MPI_Send(&mutual_info[0], num_outputs, MPI_MUTUAL_INFO, 0, 123, MPI_COMM_WORLD);
         }
 
-        // Sort the result
-        std::sort(&mutual_info[0], &mutual_info[num_proc * num_outputs]);
+        IOMpi::Instance().Cprintf("3-SNP analysis finalized\n");
 
-        // Write results to the output file
-        MyFilePt out = myfopen(out_file.c_str(), "wb");
-        if (out == NULL) {
-            IOMpi::Instance().Mprintf("Out file: file %s could not be opened\n", out_file.c_str());
-            return;
+        // Print runtime statistics to stdout
+        auto timers = statistics.Get_all_timers();
+        std::string output("Statistics\n");
+        for (auto it = timers.begin(); it < timers.end(); it++) {
+            output += "\t" + it->first + ": " + std::to_string(it->second) + " seconds\n";
         }
-        LineReader lr;
-        std::vector<MutualInfo>::reverse_iterator it;
-        int count;
-        for (it = mutual_info.rbegin(), count = 0; count < num_outputs; it++, count++) {
-            lr.printMI(out, it->_id1, it->_id2, it->_id3, it->_mutualInfoValue);
+        auto values = statistics.Get_all_values();
+        for (auto it = values.begin(); it < values.end(); it++) {
+            output += "\t" + it->first + ": " + std::to_string(it->second) + "\n";
         }
-        myfclose(out);
-    } else {
-        // Send results to master
-        MPI_Send(&mutual_info[0], num_outputs, MPI_MUTUAL_INFO, 0, 123, MPI_COMM_WORLD);
+        IOMpi::Instance().Cprintf(output.c_str());
+    } catch (Dataset::ReadError &e) {
+        IOMpi::Instance().Mprintf(e.what());
     }
-
-    IOMpi::Instance().Cprintf("3-SNP analysis finalized\n");
-
-    // Print runtime statistics to stdout
-    auto timers = statistics.Get_all_timers();
-    std::string output("Statistics\n");
-    for (auto it = timers.begin(); it < timers.end(); it++) {
-        output += "\t" + it->first + ": " + std::to_string(it->second) + " seconds\n";
-    }
-    auto values = statistics.Get_all_values();
-    for (auto it = values.begin(); it < values.end(); it++) {
-        output += "\t" + it->first + ": " + std::to_string(it->second) + "\n";
-    }
-    IOMpi::Instance().Cprintf(output.c_str());
-
 }
