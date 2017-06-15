@@ -7,6 +7,9 @@
 
 #include <string>
 #include <stdexcept>
+#include <vector>
+#include "Individual.h"
+#include "AltSNP.h"
 
 class Dataset {
 public:
@@ -19,13 +22,18 @@ public:
 
     Dataset(std::string tped_path, std::string tfam_path);
 
-    std::vector<SNP> &Get_SNPs();
+    ~Dataset();
 
-    std::vector<Individual> &Get_individuals();
+    std::vector<uint32_t> *&Get_cases();
+
+    std::vector<uint32_t> *&Get_ctrls();
 
 private:
-    std::vector<SNP> snps;
-    std::vector<Individual> individuals;
+
+    void Bitvector_representation(std::vector<Individual> &inds, std::vector<AltSNP> &snps);
+
+    std::vector<uint32_t> *cases;
+    std::vector<uint32_t> *ctrls;
 };
 
 #endif //MPI3SNP_DATASET_H
