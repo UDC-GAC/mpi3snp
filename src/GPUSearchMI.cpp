@@ -56,8 +56,8 @@ void GPUSearchMI::execute() {
     Statistics statistics;
 
     try {
-        GPUEngine gpu_engine(tped_file, tfam_file, num_proc, proc_id, gpu_ids, num_outputs, use_mi);
-        gpu_engine.run(mutual_info, statistics);
+        GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, gpu_ids, use_mi);
+        gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
 
         if (proc_id == 0) {
             // Gather all the results
@@ -71,18 +71,17 @@ void GPUSearchMI::execute() {
             std::sort(&mutual_info[0], &mutual_info[num_proc * num_outputs]);
 
             // Write results to the output file
-            MyFilePt out = myfopen(out_file.c_str(), "wb");
+            FILE *out = fopen(out_file.c_str(), "wb");
             if (out == NULL) {
                 IOMpi::Instance().Mprintf("Out file: file %s could not be opened\n", out_file.c_str());
                 return;
             }
-            LineReader lr;
             std::vector<MutualInfo>::reverse_iterator it;
             int count;
-            for (it = mutual_info.rbegin(), count = 0; count < num_outputs; it++, count++) {
-                lr.printMI(out, it->_id1, it->_id2, it->_id3, it->_mutualInfoValue);
+            for (it = mutual_info.rbegin(), count = 0; it < mutual_info.rend(); it++, count++) {
+                fprintf(out, "%u %u %u %f\n", it->_id1, it->_id2, it->_id3, it->_mutualInfoValue);
             }
-            myfclose(out);
+            fclose(out);
         } else {
             // Send results to master
             MPI_Send(&mutual_info[0], num_outputs, MPI_MUTUAL_INFO, 0, 123, MPI_COMM_WORLD);
