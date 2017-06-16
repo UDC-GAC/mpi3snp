@@ -11,24 +11,25 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path) {
     std::vector<Individual> individuals;
     std::vector<SNP> snps;
 
+    file.open(tfam_path.c_str(), std::ios::in);
+    if (!file.is_open()){
+        throw ReadError("Error while opening " + tfam_path + ", check file path/permissions");
+    }
     try {
-        file.open(tfam_path.c_str(), std::ios::in);
-        file.exceptions(std::ifstream::badbit);
         Individual ind;
         while (file >> ind) {
             individuals.push_back(ind);
         }
-    } catch (const std::ifstream::failure &e) {
-        throw ReadError(e.what());
     } catch (const Individual::InvalidIndividual &e) {
         throw ReadError("Error in " + tfam_path + ":" + std::to_string(individuals.size() + 1) + ": " + e.what());
     }
     file.close();
 
+    file.open(tped_path.c_str(), std::ios::in);
+    if (!file.is_open()){
+        throw ReadError("Error while opening " + tped_path + ", check file path/permissions");
+    }
     try {
-        file.open(tped_path, std::ios::in);
-        file.exceptions(std::ifstream::badbit);
-
         SNP snp;
         while (file >> snp) {
             if (snp.genotypes.size() == individuals.size()) {
@@ -38,8 +39,6 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path) {
                                 ": the number of nucleotides does not match the number of individuals");
             }
         }
-    } catch (const std::ifstream::failure &e) {
-        throw ReadError(e.what());
     } catch (const SNP::InvalidSNP &e) {
         throw ReadError("Error in " + tped_path + ":" + std::to_string(snps.size() + 1) + ": " + e.what());
     }
@@ -48,7 +47,8 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path) {
     cases = new std::vector<uint32_t>[3];
     ctrls = new std::vector<uint32_t>[3];
     snp_count = snps.size();
-    Bitvector_representation(individuals, snps);
+    Bitvector_representation(individuals, snps
+    );
 }
 
 unsigned long find_index(unsigned long start, unsigned long end, std::function<bool(unsigned long)> fun) {
