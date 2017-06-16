@@ -4,17 +4,16 @@ set(CMAKE_CXX_STANDARD 14)
 set(PROJECT_NAME MPI3SNP)
 set(PROJECT_VERSION_MAJOR 1)
 set(PROJECT_VERSION_MINOR 0)
-#set(CMAKE_CXX_FLAGS "-O2")
+#set(CMAKE_CXX_FLAGS "-g")
 add_subdirectory(thirdparty/args)
 
 find_package(MPI REQUIRED)
 find_package(CUDA REQUIRED)
 
 configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/src/Definitions.h)
-set(MPI3SNP_c++_files src/main.cpp src/Dataset.cpp src/GPUSearchMI.cpp src/LineReader.cpp src/Utils.cpp
+set(MPI3SNP_c++_files src/main.cpp src/Dataset.cpp src/GPUSearchMI.cpp src/Utils.cpp
         src/IOMpi.cpp src/Statistics.cpp)
-set(MPI3SNP_cuda_files src/EntropySearch.cu src/GPUEngine.cpp src/GPUMacros.cpp src/GPUSNPDistributor.cpp)
-#src/GPUSNPDistributorStatic.cpp
+set(MPI3SNP_cuda_files src/Distributor.cpp src/EntropySearch.cu src/GPUEngine.cpp src/GPUMacros.cpp)
 
 include_directories(${MPI_CXX_INCLUDE_PATH} ${ARGS_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src/)
 add_library(cpp_objs OBJECT ${MPI3SNP_c++_files})
