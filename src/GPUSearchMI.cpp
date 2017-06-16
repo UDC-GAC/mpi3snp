@@ -78,7 +78,7 @@ void GPUSearchMI::execute() {
             }
             std::vector<MutualInfo>::reverse_iterator it;
             int count;
-            for (it = mutual_info.rbegin(), count = 0; it < mutual_info.rend(); it++, count++) {
+            for (it = mutual_info.rbegin(), count = 0; count < num_outputs; it++, count++) {
                 fprintf(out, "%u %u %u %f\n", it->_id1, it->_id2, it->_id3, it->_mutualInfoValue);
             }
             fclose(out);
