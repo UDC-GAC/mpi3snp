@@ -10,8 +10,11 @@
 #include "EntropySearch.h"
 #include <float.h>
 
-GPUEngine::GPUEngine(std::string tped, std::string tfam, int proc_num, int proc_id, std::vector<unsigned int> gpu_ids,
-                     uint16_t num_outputs, bool use_mi) {
+GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, std::vector<unsigned int> gpu_ids, bool use_mi) :
+        proc_num(proc_num),
+        proc_id(proc_id),
+        gpu_ids(gpu_ids),
+        use_mi(use_mi) {
     /*check the availability of GPUs*/
     if (GPUInfo::getGPUInfo()->getNumGPUs() == 0) {
         Utils::exit("No compatible GPUs are available in your machine\n");
@@ -24,27 +27,21 @@ GPUEngine::GPUEngine(std::string tped, std::string tfam, int proc_num, int proc_
 //    } else {
 //        distributor = new GPUSNPDistributor(options);
 //    }
-    distributor = new GPUSNPDistributor(tfam, tped, proc_num, gpu_ids.size(), proc_id);
-    this->gpu_ids = gpu_ids;
-    this->use_mi = use_mi;
-    this->num_outputs = num_outputs;
 }
 
-GPUEngine::~GPUEngine() {
-    delete distributor;
-}
-
-void GPUEngine::run(std::vector<MutualInfo> &mutual_info, Statistics &statistics) {
+void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, unsigned int num_outputs,
+                    Statistics &statistics) {
     std::string snp_load_label("SNPs load time");
     statistics.Begin_timer(snp_load_label);
-    distributor->loadSNPSet();
+    Dataset dataset(tped, tfam);
     statistics.End_timer(snp_load_label);
 
+    Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count(), gpu_ids.size() > 1, NUM_PAIRS_BLOCK);
     vector<pthread_t> threadIDs(gpu_ids.size(), 0);
     vector<ThreadParams *> threadParams(gpu_ids.size());
     for (int tid = 0; tid < gpu_ids.size(); tid++) {
         // Create parameters for CPU threads
-        threadParams[tid] = new ThreadParams(tid, num_outputs, distributor, gpu_ids[tid], use_mi, statistics);
+        threadParams[tid] = new ThreadParams(gpu_ids[tid], num_outputs, dataset, distributor, use_mi, statistics);
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, handle, threadParams[tid]) != 0) {
             Utils::exit("Thread creating failed\n");
@@ -56,7 +53,7 @@ void GPUEngine::run(std::vector<MutualInfo> &mutual_info, Statistics &statistics
     // Wait for the completion of all threads
     for (int tid = 0; tid < gpu_ids.size(); tid++) {
         pthread_join(threadIDs[tid], NULL);
-        memcpy(&auxMutualInfo[tid * num_outputs], threadParams[tid]->_mutualInfo,
+        memcpy(&auxMutualInfo[tid * num_outputs], threadParams[tid]->mutual_info,
                num_outputs * sizeof(MutualInfo));
         delete threadParams[tid];
     }
@@ -83,26 +80,45 @@ void GPUEngine::run(std::vector<MutualInfo> &mutual_info, Statistics &statistics
 
 void *GPUEngine::handle(void *arg) {
     ThreadParams *params = (ThreadParams *) arg;
-    GPUSNPDistributor *distributor = params->_distributor;
-    uint16_t num_outputs = params->_numOutputs;
-    unsigned int gpu_id = params->_gpu;
-    bool isMI = params->_isMI;
+    Dataset &dataset = params->dataset;
+    Distributor &distributor = params->distributor;
+    unsigned int num_outputs = params->num_outputs;
+    unsigned int gpu_id = params->gpu_id;
+    bool isMI = params->mi;
     Statistics &statistics = params->statistics;
 
     GPUInfo::getGPUInfo()->setDevice(gpu_id);
 
-    EntropySearch *search = new EntropySearch(isMI, distributor->getNumSnp(), distributor->getNumCases(),
-                                              distributor->getNumCtrls(), num_outputs,
-                                              distributor->getHost0Cases(), distributor->getHost1Cases(),
-                                              distributor->getHost2Cases(), distributor->getHost0Ctrls(),
-                                              distributor->getHost1Ctrls(), distributor->getHost2Ctrls());
+    uint32_t *hCa0, *hCa1, *hCa2, *hCt0, *hCt1, *hCt2;
+    cudaMallocHost(&hCa0, dataset.Get_cases()[0].size() * sizeof(uint32_t));
+    myCheckCudaError;
+    memcpy(hCa0, &dataset.Get_cases()[0][0], dataset.Get_cases()[0].size());
+    cudaMallocHost(&hCa1, dataset.Get_cases()[1].size() * sizeof(uint32_t));
+    myCheckCudaError;
+    memcpy(hCa1, &dataset.Get_cases()[1][0], dataset.Get_cases()[1].size());
+    cudaMallocHost(&hCa2, dataset.Get_cases()[2].size() * sizeof(uint32_t));
+    myCheckCudaError;
+    memcpy(hCa2, &dataset.Get_cases()[2][0], dataset.Get_cases()[2].size());
+    cudaMallocHost(&hCt0, dataset.Get_ctrls()[0].size() * sizeof(uint32_t));
+    myCheckCudaError;
+    memcpy(hCt0, &dataset.Get_ctrls()[0][0], dataset.Get_ctrls()[0].size());
+    cudaMallocHost(&hCt1, dataset.Get_ctrls()[1].size() * sizeof(uint32_t));
+    myCheckCudaError;
+    memcpy(hCt1, &dataset.Get_ctrls()[1][0], dataset.Get_ctrls()[1].size());
+    cudaMallocHost(&hCt2, dataset.Get_ctrls()[2].size() * sizeof(uint32_t));
+    myCheckCudaError;
+    memcpy(hCt2, &dataset.Get_ctrls()[2][0], dataset.Get_ctrls()[2].size());
+
+    EntropySearch *search = new EntropySearch(isMI, dataset.Get_SNP_count(), dataset.Get_case_count(),
+                                              dataset.Get_ctrl_count(), num_outputs,
+                                              hCa0, hCa1, hCa2, hCt0, hCt1, hCt2);
 
     uint2 *auxIds;
     cudaMallocHost(&auxIds, NUM_PAIRS_BLOCK * sizeof(uint2));
     myCheckCudaError;
 
     // Variables to work with the outputs
-    MutualInfo *mutualInfo = params->_mutualInfo;
+    MutualInfo *mutualInfo = params->mutual_info;
     // The minimum value in the array
     float minMI = FLT_MAX;
     // The position of the minimum value
@@ -125,7 +141,7 @@ void *GPUEngine::handle(void *arg) {
 
     while (moreAnal) {
         // Take some SNPs
-        numPairsBlock = distributor->getPairsSNPs(auxIds, myTotalAnal, params->_tid);
+        numPairsBlock = distributor.Get_pairs(auxIds, myTotalAnal);
 
         if (numPairsBlock) {
             search->mutualInfo(numPairsBlock, auxIds, mutualInfo, minMI, minMIPos, numEntriesWithMI);
@@ -143,6 +159,18 @@ void *GPUEngine::handle(void *arg) {
 
     cudaFreeHost(auxIds);
     myCheckCudaError;
+    cudaFreeHost(hCa0);
+    myCheckCudaError;
+    cudaFreeHost(hCa1);
+    myCheckCudaError;
+    cudaFreeHost(hCa2);
+    myCheckCudaError;
+    cudaFreeHost(hCt0);
+    myCheckCudaError;
+    cudaFreeHost(hCt1);
+    myCheckCudaError;
+    cudaFreeHost(hCt2);
+    myCheckCudaError;
     delete search;
-    return NULL;
+    return nullptr;
 }

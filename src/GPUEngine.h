@@ -8,22 +8,19 @@
 #ifndef GPUENGINE_H_
 #define GPUENGINE_H_
 
-#include "GPUSNPDistributor.h"
 #include "Statistics.h"
+#include "MutualInfo.h"
 
 class GPUEngine {
 public:
-    GPUEngine(std::string tped, std::string tfam, int proc_num, int proc_id, std::vector<unsigned int> gpu_ids,
-              uint16_t num_outputs, bool use_mi);
+    GPUEngine(unsigned int proc_num, unsigned int proc_id, std::vector<unsigned int> gpu_ids, bool use_mi);
 
-    ~GPUEngine();
-
-    void run(std::vector<MutualInfo> &mutual_info, Statistics &statistics);
+    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, unsigned int num_outputs,
+             Statistics &statistics);
 
 private:
-    GPUSNPDistributor *distributor;
     std::vector<unsigned int> gpu_ids;
-    uint16_t num_outputs;
+    unsigned int proc_num, proc_id;
     bool use_mi;
 
     static void *handle(void *arg);
