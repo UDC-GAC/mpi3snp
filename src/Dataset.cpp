@@ -75,7 +75,6 @@ void Dataset::Bitvector_representation(std::vector<Individual> &inds, std::vecto
                (ctrlpos = find_index(ctrlpos, inds.size(), [&inds](int k) { return inds[k].ph == 1; })) < inds.size()) {
             sctrls.push_back(ctrlpos++);
         }
-
         // Read all SNPs for those 32 controls and cases
         for (i = 0; i < snps.size(); i++) {
             for (j = 0; j < 3; j++) {
@@ -94,12 +93,18 @@ void Dataset::Bitvector_representation(std::vector<Individual> &inds, std::vecto
                     ctrls_buffer[j] += snps[i].genotypes[pos] == j;
                 }
             }
-            for (j = 0; j < 3; j++) {
-                cases[j].push_back(cases_buffer[j]);
-                ctrls[j].push_back(ctrls_buffer[j]);
+            // Save buffers when not empty
+            if (!scases.empty()){
+                for (j=0; j<3; j++){
+                    cases[j].push_back(cases_buffer[j]);
+                }
+            }
+            if (!sctrls.empty()){
+                for (j=0; j<3; j++){
+                    ctrls[j].push_back(ctrls_buffer[j]);
+                }
             }
         }
-
         num_cases += scases.size();
         num_ctrls += sctrls.size();
     }
