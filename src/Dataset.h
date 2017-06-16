@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <vector>
 #include "Individual.h"
-#include "AltSNP.h"
+#include "SNP.h"
 
 class Dataset {
 public:
@@ -24,16 +24,34 @@ public:
 
     ~Dataset();
 
-    std::vector<uint32_t> *&Get_cases();
+    inline std::vector<uint32_t> *&Get_cases(){
+        return cases;
+    }
 
-    std::vector<uint32_t> *&Get_ctrls();
+    inline std::vector<uint32_t> *&Get_ctrls(){
+        return ctrls;
+    }
+
+    inline uint32_t Get_SNP_count(){
+        return snp_count;
+    }
+
+    inline uint16_t Get_ctrl_count(){
+        return num_ctrls;
+    }
+
+    inline uint16_t Get_case_count(){
+        return num_cases;
+    }
 
 private:
 
-    void Bitvector_representation(std::vector<Individual> &inds, std::vector<AltSNP> &snps);
+    void Bitvector_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
 
     std::vector<uint32_t> *cases;
     std::vector<uint32_t> *ctrls;
+    uint32_t snp_count;
+    uint16_t num_cases, num_ctrls;
 };
 
 #endif //MPI3SNP_DATASET_H

@@ -4,14 +4,12 @@
 
 #include "Dataset.h"
 #include <fstream>
-#include <iostream>
+#include <functional>
 
-Dataset::Dataset(std::string tped_path, std::string tfam_path) :
-        cases(new std::vector<uint32_t>[3]),
-        ctrls(new std::vector<uint32_t>[3]) {
+Dataset::Dataset(std::string tped_path, std::string tfam_path) {
     std::ifstream file;
     std::vector<Individual> individuals;
-    std::vector<AltSNP> snps;
+    std::vector<SNP> snps;
 
     try {
         file.open(tfam_path.c_str(), std::ios::in);
@@ -31,75 +29,83 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path) :
         file.open(tped_path, std::ios::in);
         file.exceptions(std::ifstream::badbit);
 
-        AltSNP snp;
+        SNP snp;
         while (file >> snp) {
             snps.push_back(snp);
         }
     } catch (const std::ifstream::failure &e) {
         throw ReadError(e.what());
-    } catch (const AltSNP::InvalidSNP &e) {
+    } catch (const SNP::InvalidSNP &e) {
         throw ReadError("Error in " + tped_path + ":" + std::to_string(snps.size() + 1) + ": " + e.what());
     }
     file.close();
 
+    cases = new std::vector<uint32_t>[3];
+    ctrls = new std::vector<uint32_t>[3];
+    snp_count = snps.size();
     Bitvector_representation(individuals, snps);
 }
 
-void Dataset::Bitvector_representation(std::vector<Individual> &inds, std::vector<AltSNP> &snps) {
-    uint32_t buffer[3];
-    int count;
-    int i, j, k;
+unsigned long find_index(unsigned long start, unsigned long end, std::function<bool(unsigned long)> fun) {
+    while (start != end && !fun(start)) {
+        start++;
+    }
+    return start;
+}
 
-    // Iterate on all SNPs from an specific individual, for all individuals
-    for (i = 0; i < inds.size(); i++) {
-        j = 0;
-        while (j < snps.size()) {
-            // Reset buffers
-            count = 0;
-            for (k = 0; k < 3; k++) {
-                buffer[k] = 0;
+void Dataset::Bitvector_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
+    std::vector<unsigned long> scases(32), sctrls(32);
+    unsigned long ctrlpos = 0, casepos = 0;
+    uint32_t cases_buffer[3], ctrls_buffer[3];
+    int i, j;
+
+    num_cases = 0;
+    num_ctrls = 0;
+
+    // Iterate on all SNPs considering a block of 32 cases and controls, for all individuals
+    while (num_cases + num_ctrls < inds.size()) {
+        // Select next 32 controls and cases
+        scases.clear();
+        while (scases.size() < 32 &&
+               (casepos = find_index(casepos, inds.size(), [&inds](int k) { return inds[k].ph == 2; })) < inds.size()) {
+            scases.push_back(casepos++);
+        }
+        sctrls.clear();
+        while (sctrls.size() < 32 &&
+               (ctrlpos = find_index(ctrlpos, inds.size(), [&inds](int k) { return inds[k].ph == 1; })) < inds.size()) {
+            sctrls.push_back(ctrlpos++);
+        }
+
+        // Read all SNPs for those 32 controls and cases
+        for (i = 0; i < snps.size(); i++) {
+            for (j = 0; j < 3; j++) {
+                cases_buffer[j] = 0;
+                ctrls_buffer[j] = 0;
             }
-
-            // Read all SNPs for a given individual until buffers are full or all SNPs are read
-            while (j < snps.size() && count < 32) {
-                for (k = 0; k < 3; k++) {
-                    buffer[k] = buffer[k] << 1;
-                    buffer[k] += snps[j].genotypes[i] == k;
-                }
-                j++;
-                count++;
-            }
-
-            // Shift all bits left if 32-bit word is not full
-            if (count < 32) {
-                for (k = 0; k < 3; k++) {
-                    buffer[k] = buffer[k] << (32 - count);
+            for (unsigned long pos : scases) {
+                for (j = 0; j < 3; j++) {
+                    cases_buffer[j] = cases_buffer[j] << 1;
+                    cases_buffer[j] += snps[i].genotypes[pos] == j;
                 }
             }
-
-            // Store 32-bit words in each corresponding vector
-            if (inds[i].ph == 1) {
-                for (k = 0; k < 3; k++) {
-                    ctrls[k].push_back(buffer[k]);
+            for (unsigned long pos : sctrls) {
+                for (j = 0; j < 3; j++) {
+                    ctrls_buffer[j] = ctrls_buffer[j] << 1;
+                    ctrls_buffer[j] += snps[i].genotypes[pos] == j;
                 }
-            } else {
-                for (k = 0; k < 3; k++) {
-                    cases[k].push_back(buffer[k]);
-                }
+            }
+            for (j = 0; j < 3; j++) {
+                cases[j].push_back(cases_buffer[j]);
+                ctrls[j].push_back(ctrls_buffer[j]);
             }
         }
+
+        num_cases += scases.size();
+        num_ctrls += sctrls.size();
     }
 }
 
 Dataset::~Dataset() {
     delete[] cases;
     delete[] ctrls;
-}
-
-std::vector<uint32_t> *&Dataset::Get_cases() {
-    return cases;
-}
-
-std::vector<uint32_t> *&Dataset::Get_ctrls() {
-    return ctrls;
 }
