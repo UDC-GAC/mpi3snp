@@ -1,132 +1,85 @@
-/*
- * SNP.h
- *
- *  Created on: 10/10/2013
- *      Author: jorge
- */
+//
+// Created by christian on 12/06/17.
+//
 
-#ifndef SNP_H_
-#define SNP_H_
+#ifndef MPI3SNP_SNP2_H_H
+#define MPI3SNP_SNP2_H_H
 
-#include "Macros.h"
-#include "Utils.h"
 
-// Structure to store all the information of one SNP
-struct SNP
-{
-	SNP(){
-		_case0Values = NULL;
-		_ctrl0Values = NULL;
-		_case1Values = NULL;
-		_ctrl1Values = NULL;
-		_case2Values = NULL;
-		_ctrl2Values = NULL;
-		_name = new uint8_t[SNP_MAX_NAME_SIZE];
-		_nameLength = 0;
-	}
+#include <string>
+#include <sstream>
+#include <vector>
+#include <algorithm>
 
-	~SNP(){
-		if (_name){
-			delete[] _name;
-		}
+struct SNP {
+    class InvalidSNP : public std::runtime_error {
+    public:
+        InvalidSNP(const std::string &message) : std::runtime_error(message) {};
 
-		if(_case0Values){
-			delete[] _case0Values;
-		}
+        virtual ~InvalidSNP() {};
+    };
 
-		if(_case1Values){
-			delete[] _case0Values;
-		}
+    std::string chr_code; // Chromosome code
+    std::string v_id; // Variant identifier
+    double pos; // Position in morgans or centimorgans
+    unsigned int coord; // Base-pair coordinate
+    std::vector<uint8_t> genotypes;
 
-		if(_case2Values){
-			delete[] _case2Values;
-		}
+    friend std::istream &operator>>(std::istream &str, SNP &snp) {
+        std::string line;
+        std::vector<char> nucleotides;
+        SNP tmp;
+        if (std::getline(str, line)) {
+            std::stringstream iss(line);
+            // Parse SNP information
+            if (!(iss >> tmp.chr_code &&
+                  iss >> tmp.v_id &&
+                  iss >> tmp.pos &&
+                  iss >> tmp.coord)) {
+                throw InvalidSNP("invalid loci information");
+            }
 
-		if(_ctrl0Values){
-			delete[] _ctrl0Values;
-		}
+            // Read nucleotides
+            char c;
+            while (iss >> c && (c == 'A' || c == 'C' || c == 'T' || c == 'G')) {
+                nucleotides.push_back(c);
+            }
 
-		if(_ctrl1Values){
-			delete[] _ctrl0Values;
-		}
+            if (!iss.eof()) {
+                throw InvalidSNP(std::string("invalid nucleotide value '") + c + "' at position " +
+                                 std::to_string(iss.tellg()));
+            }
 
-		if(_ctrl2Values){
-			delete[] _ctrl2Values;
-		}
-	}
+            if (nucleotides.size() % 2) {
+                throw InvalidSNP("odd number of nucleotides");
+            }
 
-	void setName(uint8_t* name){
-			if ((_nameLength = strlen((char*) name)) > SNP_MAX_NAME_SIZE) {
-			Utils::exit("Name too long in function %s line %d\n",
-						__FUNCTION__, __LINE__);
-		}
-		else{
-			strcpy((char*) _name, (char*) name);
-		}
-	}
+            // Find minor character
+            char a1 = nucleotides[0];
+            auto pos = std::find_if(nucleotides.begin(), nucleotides.end(), [&a1](char n) { return n != a1; });
+            char a2 = pos == nucleotides.end() ? a1 : *pos;
+            a1 = std::min(a1, a2);
 
-	// Be careful because the size is length/32
-	void setCaseValues(uint32_t* case0Values, uint32_t* case1Values, uint32_t* case2Values, size_t size){
+            // Translate nucleotides into genotype
+            tmp.genotypes.reserve(nucleotides.size() / 2);
+            uint8_t allele;
+            for (auto it = nucleotides.begin(); it < nucleotides.end();) {
+                allele = (*(it++) != a1) + (*(it++) != a1);
+                tmp.genotypes.push_back(allele);
+            }
 
-		if(_case0Values){
-			delete[] _case0Values;
-		}
+            snp.swap(tmp);
+        }
+        return str;
+    }
 
-		if(_case1Values){
-			delete[] _case1Values;
-		}
-
-		if(_case2Values){
-			delete[] _case2Values;
-		}
-
-		_case0Values = new uint32_t[size];
-		memcpy(_case0Values, case0Values, size*sizeof(uint32_t));
-
-		_case1Values = new uint32_t[size];
-		memcpy(_case1Values, case1Values, size*sizeof(uint32_t));
-
-		_case2Values = new uint32_t[size];
-		memcpy(_case2Values, case2Values, size*sizeof(uint32_t));
-	}
-
-	// Be careful because the size is length/32
-	void setCtrlValues(uint32_t* ctrl0Values, uint32_t* ctrl1Values, uint32_t* ctrl2Values, size_t size){
-		if(_ctrl0Values){
-			delete[] _ctrl0Values;
-		}
-
-		_ctrl0Values = new uint32_t[size];
-		memcpy(_ctrl0Values, ctrl0Values, size*sizeof(uint32_t));
-
-		if(_ctrl1Values){
-			delete[] _ctrl1Values;
-		}
-
-		_ctrl1Values = new uint32_t[size];
-		memcpy(_ctrl1Values, ctrl1Values, size*sizeof(uint32_t));
-
-		if(_ctrl2Values){
-			delete[] _ctrl2Values;
-		}
-
-		_ctrl2Values = new uint32_t[size];
-		memcpy(_ctrl2Values, ctrl2Values, size*sizeof(uint32_t));
-	}
-
-	// SIZE represents the number of uint8 -> The length is larger!!!
-	uint8_t* _name;
-	uint16_t _nameLength;
-
-	// Each position keeps 32 binary values (each binary value for one individual)
-	uint32_t *_case0Values;
-	uint32_t *_case1Values;
-	uint32_t *_case2Values;
-	uint32_t *_ctrl0Values;
-	uint32_t *_ctrl1Values;
-	uint32_t *_ctrl2Values;
+    void swap(SNP &other) {
+        std::swap(chr_code, other.chr_code);
+        std::swap(v_id, other.v_id);
+        std::swap(pos, other.pos);
+        std::swap(coord, other.coord);
+        std::swap(genotypes, other.genotypes);
+    }
 };
 
-
-
-#endif /* SNP_H_ */
+#endif //MPI3SNP_SNP2_H_H
