@@ -31,7 +31,12 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path) {
 
         SNP snp;
         while (file >> snp) {
-            snps.push_back(snp);
+            if (snp.genotypes.size() == individuals.size()) {
+                snps.push_back(snp);
+            } else {
+                throw ReadError("Error in " + tped_path + ":" + std::to_string(snps.size() + 1) +
+                                ": the number of nucleotides does not match the number of individuals");
+            }
         }
     } catch (const std::ifstream::failure &e) {
         throw ReadError(e.what());
@@ -94,13 +99,13 @@ void Dataset::Bitvector_representation(std::vector<Individual> &inds, std::vecto
                 }
             }
             // Save buffers when not empty
-            if (!scases.empty()){
-                for (j=0; j<3; j++){
+            if (!scases.empty()) {
+                for (j = 0; j < 3; j++) {
                     cases[j].push_back(cases_buffer[j]);
                 }
             }
-            if (!sctrls.empty()){
-                for (j=0; j<3; j++){
+            if (!sctrls.empty()) {
+                for (j = 0; j < 3; j++) {
                     ctrls[j].push_back(ctrls_buffer[j]);
                 }
             }
