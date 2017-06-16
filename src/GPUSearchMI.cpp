@@ -101,6 +101,6 @@ void GPUSearchMI::execute() {
         }
         IOMpi::Instance().Cprintf(output.c_str());
     } catch (Dataset::ReadError &e) {
-        IOMpi::Instance().Mprintf(e.what());
+        IOMpi::Instance().Mprintf((std::string(e.what()) + "\n").c_str());
     }
 }
