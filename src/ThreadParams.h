@@ -8,36 +8,35 @@
 #ifndef THREADPARAMS_H_
 #define THREADPARAMS_H_
 
-#include "Macros.h"
-#include "GPUEngine.h"
 #include "MutualInfo.h"
+#include "Dataset.h"
+#include "Distributor.h"
 
 struct ThreadParams {
-    ThreadParams(int tid, uint16_t numOutputs, GPUSNPDistributor *distributor, int gpu_id, bool isMI,
-                 Statistics &stats) : statistics(stats) {
-        _tid = tid;
-        _numOutputs = numOutputs;
-        _distributor = distributor;
-        _gpu = gpu_id;
-        _isMI = isMI;
-
-        _mutualInfo = new MutualInfo[numOutputs];
+    ThreadParams(unsigned int gpu_id, unsigned int num_outputs, Dataset &dataset, Distributor &dist, bool use_MI,
+                 Statistics &stats) :
+            gpu_id(gpu_id),
+            num_outputs(num_outputs),
+            dataset(dataset),
+            distributor(dist),
+            mi(use_MI),
+            statistics(stats) {
+        mutual_info = new MutualInfo[num_outputs];
     }
 
     ~ThreadParams() {
-        delete[] _mutualInfo;
+        delete[] mutual_info;
     }
 
     // Parameters
-    int _tid;
-    uint16_t _numOutputs;
-    GPUSNPDistributor *_distributor;
-    unsigned int _gpu;
-    bool _isMI;
-
+    unsigned int gpu_id;
+    unsigned int num_outputs;
+    Dataset &dataset;
+    Distributor &distributor;
+    bool mi;
     // Return values
     Statistics &statistics;
-    MutualInfo *_mutualInfo;
+    MutualInfo *mutual_info = nullptr;
 };
 
 
