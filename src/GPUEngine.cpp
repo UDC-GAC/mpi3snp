@@ -8,25 +8,32 @@
 #include "GPUEngine.h"
 #include "ThreadParams.h"
 #include "EntropySearch.h"
+#include "CUDAError.h"
 #include <float.h>
+#include <cstring>
 
 GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, std::vector<unsigned int> gpu_ids, bool use_mi) :
         proc_num(proc_num),
         proc_id(proc_id),
         gpu_ids(gpu_ids),
         use_mi(use_mi) {
-    /*check the availability of GPUs*/
-    if (GPUInfo::getGPUInfo()->getNumGPUs() == 0) {
-        Utils::exit("No compatible GPUs are available in your machine\n");
+    int avail_gpus = 0;
+    if (cudaSuccess != cudaGetDeviceCount(&avail_gpus))
+        throw CUDAError(cudaGetLastError());
+    if (avail_gpus == 0) {
+        throw CUDAError("Could not find any CUDA-enabled GPU");
     }
 
-    // GPU detection and id setting here!
-
-//    if (options->isHeteroGPUs()) {
-//        distributor = new GPUSNPDistributorStatic(options);
-//    } else {
-//        distributor = new GPUSNPDistributor(options);
-//    }
+    for (unsigned int id : gpu_ids) {
+        cudaDeviceProp gpu_prop;
+        if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, id))
+            throw CUDAError(cudaGetLastError());
+        if (gpu_prop.major < 2 || !gpu_prop.canMapHostMemory) {
+            throw CUDAError("GPU " + std::to_string(id) + " does not meet compute capabilities\n" +
+                                "Name: " + gpu_prop.name + "\n" + "Compute capability: " +
+                                std::to_string(gpu_prop.major) + "." + std::to_string(gpu_prop.minor));
+        }
+    }
 }
 
 void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, unsigned int num_outputs,
@@ -36,15 +43,17 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     Dataset dataset(tped, tfam);
     statistics.End_timer(snp_load_label);
 
-    Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count(), gpu_ids.size() > 1, NUM_PAIRS_BLOCK);
-    vector<pthread_t> threadIDs(gpu_ids.size(), 0);
-    vector<ThreadParams *> threadParams(gpu_ids.size());
+    Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count(), gpu_ids.size() > 1);
+    std::vector<pthread_t> threadIDs(gpu_ids.size(), 0);
+    std::vector<ThreadParams *> threadParams(gpu_ids.size());
     for (int tid = 0; tid < gpu_ids.size(); tid++) {
         // Create parameters for CPU threads
         threadParams[tid] = new ThreadParams(gpu_ids[tid], num_outputs, dataset, distributor, use_mi, statistics);
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, handle, threadParams[tid]) != 0) {
-            Utils::exit("Thread creating failed\n");
+            //Utils::exit("Thread creating failed\n");
+            // TODO: thread error handling
+            exit(0);
         }
     }
 
@@ -87,26 +96,27 @@ void *GPUEngine::handle(void *arg) {
     bool isMI = params->mi;
     Statistics &statistics = params->statistics;
 
-    GPUInfo::getGPUInfo()->setDevice(gpu_id);
+    if (cudaSuccess != cudaSetDevice(gpu_id))
+        throw CUDAError(cudaGetLastError());
 
     uint32_t *hCa0, *hCa1, *hCa2, *hCt0, *hCt1, *hCt2;
-    cudaMallocHost(&hCa0, dataset.Get_cases()[0].size() * sizeof(uint32_t));
-    myCheckCudaError;
-    memcpy(hCa0, &(dataset.Get_cases()[0][0]), dataset.Get_cases()[0].size() * sizeof(uint32_t));
-    cudaMallocHost(&hCa1, dataset.Get_cases()[1].size() * sizeof(uint32_t));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&hCa0, dataset.Get_cases()[0].size() * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
+    memcpy(hCa0, &dataset.Get_cases()[0][0], dataset.Get_cases()[0].size() * sizeof(uint32_t));
+    if (cudaSuccess != cudaMallocHost(&hCa1, dataset.Get_cases()[1].size() * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
     memcpy(hCa1, &dataset.Get_cases()[1][0], dataset.Get_cases()[1].size() * sizeof(uint32_t));
-    cudaMallocHost(&hCa2, dataset.Get_cases()[2].size() * sizeof(uint32_t));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&hCa2, dataset.Get_cases()[2].size() * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
     memcpy(hCa2, &dataset.Get_cases()[2][0], dataset.Get_cases()[2].size() * sizeof(uint32_t));
-    cudaMallocHost(&hCt0, dataset.Get_ctrls()[0].size() * sizeof(uint32_t));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&hCt0, dataset.Get_ctrls()[0].size() * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
     memcpy(hCt0, &dataset.Get_ctrls()[0][0], dataset.Get_ctrls()[0].size() * sizeof(uint32_t));
-    cudaMallocHost(&hCt1, dataset.Get_ctrls()[1].size() * sizeof(uint32_t));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&hCt1, dataset.Get_ctrls()[1].size() * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
     memcpy(hCt1, &dataset.Get_ctrls()[1][0], dataset.Get_ctrls()[1].size() * sizeof(uint32_t));
-    cudaMallocHost(&hCt2, dataset.Get_ctrls()[2].size() * sizeof(uint32_t));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&hCt2, dataset.Get_ctrls()[2].size() * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
     memcpy(hCt2, &dataset.Get_ctrls()[2][0], dataset.Get_ctrls()[2].size() * sizeof(uint32_t));
 
     EntropySearch *search = new EntropySearch(isMI, dataset.Get_SNP_count(), dataset.Get_case_count(),
@@ -114,8 +124,8 @@ void *GPUEngine::handle(void *arg) {
                                               hCa0, hCa1, hCa2, hCt0, hCt1, hCt2);
 
     uint2 *auxIds;
-    cudaMallocHost(&auxIds, NUM_PAIRS_BLOCK * sizeof(uint2));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&auxIds, NUM_PAIRS_BLOCK * sizeof(uint2)))
+        throw CUDAError(cudaGetLastError());
 
     // Variables to work with the outputs
     MutualInfo *mutualInfo = params->mutual_info;
@@ -157,20 +167,20 @@ void *GPUEngine::handle(void *arg) {
     statistics.Add_value(analysis_label, myTotalAnal);
 #endif
 
-    cudaFreeHost(auxIds);
-    myCheckCudaError;
-    cudaFreeHost(hCa0);
-    myCheckCudaError;
-    cudaFreeHost(hCa1);
-    myCheckCudaError;
-    cudaFreeHost(hCa2);
-    myCheckCudaError;
-    cudaFreeHost(hCt0);
-    myCheckCudaError;
-    cudaFreeHost(hCt1);
-    myCheckCudaError;
-    cudaFreeHost(hCt2);
-    myCheckCudaError;
+    if (cudaSuccess != cudaFreeHost(auxIds))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFreeHost(hCa0))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFreeHost(hCa1))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFreeHost(hCa2))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFreeHost(hCt0))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFreeHost(hCt1))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFreeHost(hCt2))
+        throw CUDAError(cudaGetLastError());
     delete search;
     return nullptr;
 }
