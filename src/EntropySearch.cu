@@ -3,7 +3,9 @@
 //
 
 #include "EntropySearch.h"
+#include "Distributor.h"
 #include <float.h>
+#include <algorithm>
 
 /*number of streaming processor scale*/
 #define NUM_TH_PER_BLOCK    16
@@ -2069,13 +2071,13 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     _numEntriesCase = numCases / 32 + ((numCases % 32) > 0);
     _numEntriesCtrl = numCtrls / 32 + ((numCtrls % 32) > 0);
 
-    if (cudaSuccess != cudaMallocHost(&_tables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
+    if (cudaSuccess != cudaMallocHost(&_tables, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMallocHost(&_hostMIValues, NUM_PAIRS_BLOCK * _numOutputs * sizeof(float)))
+    if (cudaSuccess != cudaMallocHost(&_hostMIValues, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(float)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMallocHost(&_hostMiIds, NUM_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
+    if (cudaSuccess != cudaMallocHost(&_hostMiIds, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
 
     // Increase the size of the L1 compared to shared memory
@@ -2090,16 +2092,16 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleIG, cudaFuncCachePreferShared))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devIds, NUM_PAIRS_BLOCK * sizeof(uint2)))
+    if (cudaSuccess != cudaMalloc(&_devIds, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(uint2)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devDoubleTables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
+    if (cudaSuccess != cudaMalloc(&_devDoubleTables, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devMIValues, NUM_PAIRS_BLOCK * _numOutputs * sizeof(float)))
+    if (cudaSuccess != cudaMalloc(&_devMIValues, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(float)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devMiIds, NUM_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
+    if (cudaSuccess != cudaMalloc(&_devMiIds, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
 
     float invInds = 1.0 / (numCases + numCtrls);
@@ -2119,12 +2121,13 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     if (cudaSuccess != cudaMemcpyToSymbol(_MAX_FLOAT, &maxFL, sizeof(float), 0, cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
 
-    for (int i = 0; i < NUM_PAIRS_BLOCK; i++) {
+    for (int i = 0; i < Distributor::DEFAULT_PAIRS_BLOCK; i++) {
         _tables[i].initialize(_numEntriesCase, _numEntriesCtrl);
     }
 
     if (cudaSuccess !=
-        cudaMemcpy(_devDoubleTables, _tables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable), cudaMemcpyHostToDevice))
+        cudaMemcpy(_devDoubleTables, _tables, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(GPUDoubleContTable),
+                   cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
 
     // Allocate the arrays
@@ -2179,7 +2182,7 @@ EntropySearch::~EntropySearch() {
     if (cudaSuccess != cudaFree(_dev2Ctrls))
         throw CUDAError(cudaGetLastError());
 
-    for (int i = 0; i < NUM_PAIRS_BLOCK; i++) {
+    for (int i = 0; i < Distributor::DEFAULT_PAIRS_BLOCK; i++) {
         _tables[i].finalize();
     }
     if (cudaSuccess != cudaFreeHost(_tables))
@@ -2282,7 +2285,7 @@ void EntropySearch::_findNHighestMI(MutualInfo *mutualInfo, uint64_t totalValues
             auxMI->_mutualInfoValue = auxValue;
 
             // Find the new minimum
-            auxMI = min_element(mutualInfo, mutualInfo + _numOutputs);
+            auxMI = std::min_element(mutualInfo, mutualInfo + _numOutputs);
             minMI = auxMI->_mutualInfoValue;
             uint16_t i = 0;
             while (1) {
