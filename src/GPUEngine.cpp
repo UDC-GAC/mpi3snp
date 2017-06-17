@@ -124,7 +124,7 @@ void *GPUEngine::handle(void *arg) {
                                               hCa0, hCa1, hCa2, hCt0, hCt1, hCt2);
 
     uint2 *auxIds;
-    if (cudaSuccess != cudaMallocHost(&auxIds, NUM_PAIRS_BLOCK * sizeof(uint2)))
+    if (cudaSuccess != cudaMallocHost(&auxIds, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(uint2)))
         throw CUDAError(cudaGetLastError());
 
     // Variables to work with the outputs
