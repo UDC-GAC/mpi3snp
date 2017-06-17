@@ -9,6 +9,7 @@
 #include "GPUEngine.h"
 #include "IOMpi.h"
 #include "Dataset.h"
+#include "CUDAError.h"
 
 GPUSearchMI::Builder::Builder(std::string tped_file, std::string tfam_file, std::string out_file) {
     search_obj = new GPUSearchMI();
@@ -100,7 +101,9 @@ void GPUSearchMI::execute() {
             output += "\t" + it->first + ": " + std::to_string(it->second) + "\n";
         }
         IOMpi::Instance().Cprintf(output.c_str());
-    } catch (Dataset::ReadError &e) {
+    } catch (const Dataset::ReadError &e) {
+        IOMpi::Instance().Mprintf((std::string(e.what()) + "\n").c_str());
+    } catch (const CUDAError &e) {
         IOMpi::Instance().Mprintf((std::string(e.what()) + "\n").c_str());
     }
 }
