@@ -13,7 +13,7 @@ find_package(CUDA REQUIRED)
 configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/src/Definitions.h)
 set(MPI3SNP_c++_files src/main.cpp src/Dataset.cpp src/GPUSearchMI.cpp src/Utils.cpp
         src/IOMpi.cpp src/Statistics.cpp)
-set(MPI3SNP_cuda_files src/Distributor.cpp src/EntropySearch.cu src/GPUEngine.cpp src/GPUMacros.cpp)
+set(MPI3SNP_cuda_files src/Distributor.cpp src/EntropySearch.cu src/GPUEngine.cpp)
 
 include_directories(${MPI_CXX_INCLUDE_PATH} ${ARGS_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src/)
 add_library(cpp_objs OBJECT ${MPI3SNP_c++_files})
