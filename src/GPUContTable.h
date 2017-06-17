@@ -9,7 +9,6 @@
 #define CONTTABLE_H_
 
 #include "CUDAError.h"
-#include "Macros.h"
 
 /*
  * Structure for the auxiliar 2-SNP contingency tables
