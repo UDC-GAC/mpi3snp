@@ -5,10 +5,12 @@
 #include "EntropySearch.h"
 #include <float.h>
 
+/*number of streaming processor scale*/
+#define NUM_TH_PER_BLOCK    16
+
 __constant__ float _invInds;
 __constant__ float _entY;
 __constant__ float _MAX_FLOAT;
-
 
 static __device__ uint32_t _devpopcount(uint32_t v) {
     //uint32_t u;
@@ -2067,38 +2069,38 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     _numEntriesCase = numCases / 32 + ((numCases % 32) > 0);
     _numEntriesCtrl = numCtrls / 32 + ((numCtrls % 32) > 0);
 
-    cudaMallocHost(&_tables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&_tables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
+        throw CUDAError(cudaGetLastError());
 
-    cudaMallocHost(&_hostMIValues, NUM_PAIRS_BLOCK * _numOutputs * sizeof(float));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&_hostMIValues, NUM_PAIRS_BLOCK * _numOutputs * sizeof(float)))
+        throw CUDAError(cudaGetLastError());
 
-    cudaMallocHost(&_hostMiIds, NUM_PAIRS_BLOCK * _numOutputs * sizeof(uint3));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMallocHost(&_hostMiIds, NUM_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
+        throw CUDAError(cudaGetLastError());
 
     // Increase the size of the L1 compared to shared memory
-    cudaFuncSetCacheConfig(_kernelDoubleTable, cudaFuncCachePreferL1);
-    myCheckCudaError;
+    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelDoubleTable, cudaFuncCachePreferL1))
+        throw CUDAError(cudaGetLastError());
 
     // Increase the size of the shared memory compared to L1
-    cudaFuncSetCacheConfig(_kernelTripleMI, cudaFuncCachePreferShared);
-    myCheckCudaError;
+    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleMI, cudaFuncCachePreferShared))
+        throw CUDAError(cudaGetLastError());
 
     // Increase the size of the shared memory compared to L1
-    cudaFuncSetCacheConfig(_kernelTripleIG, cudaFuncCachePreferShared);
-    myCheckCudaError;
+    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleIG, cudaFuncCachePreferShared))
+        throw CUDAError(cudaGetLastError());
 
-    cudaMalloc(&_devIds, NUM_PAIRS_BLOCK * sizeof(uint2));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMalloc(&_devIds, NUM_PAIRS_BLOCK * sizeof(uint2)))
+        throw CUDAError(cudaGetLastError());
 
-    cudaMalloc(&_devDoubleTables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMalloc(&_devDoubleTables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
+        throw CUDAError(cudaGetLastError());
 
-    cudaMalloc(&_devMIValues, NUM_PAIRS_BLOCK * _numOutputs * sizeof(float));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMalloc(&_devMIValues, NUM_PAIRS_BLOCK * _numOutputs * sizeof(float)))
+        throw CUDAError(cudaGetLastError());
 
-    cudaMalloc(&_devMiIds, NUM_PAIRS_BLOCK * _numOutputs * sizeof(uint3));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMalloc(&_devMiIds, NUM_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
+        throw CUDAError(cudaGetLastError());
 
     float invInds = 1.0 / (numCases + numCtrls);
     float p = numCases * invInds;
@@ -2107,121 +2109,103 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     p = numCtrls * invInds;
     entY -= p * log2(p);
 
-    cudaMemcpyToSymbol(_invInds, &invInds, sizeof(float), 0, cudaMemcpyHostToDevice);
-    myCheckCudaError;
+    if (cudaSuccess != cudaMemcpyToSymbol(_invInds, &invInds, sizeof(float), 0, cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
 
-    cudaMemcpyToSymbol(_entY, &entY, sizeof(float), 0, cudaMemcpyHostToDevice);
-    myCheckCudaError;
+    if (cudaSuccess != cudaMemcpyToSymbol(_entY, &entY, sizeof(float), 0, cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
 
     float maxFL = FLT_MAX;
-    cudaMemcpyToSymbol(_MAX_FLOAT, &maxFL, sizeof(float), 0, cudaMemcpyHostToDevice);
-    myCheckCudaError;
+    if (cudaSuccess != cudaMemcpyToSymbol(_MAX_FLOAT, &maxFL, sizeof(float), 0, cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
 
     for (int i = 0; i < NUM_PAIRS_BLOCK; i++) {
         _tables[i].initialize(_numEntriesCase, _numEntriesCtrl);
     }
 
-    cudaMemcpy(_devDoubleTables, _tables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable), cudaMemcpyHostToDevice);
-    myCheckCudaError;
+    if (cudaSuccess !=
+        cudaMemcpy(_devDoubleTables, _tables, NUM_PAIRS_BLOCK * sizeof(GPUDoubleContTable), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
 
     // Allocate the arrays
-    cudaMalloc(&_dev0Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t));
-    myCheckCudaError;
-    cudaMalloc(&_dev1Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t));
-    myCheckCudaError;
-    cudaMalloc(&_dev2Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t));
-    myCheckCudaError;
-    cudaMalloc(&_dev0Ctrls, _numEntriesCtrl * _numSNPs * sizeof(uint32_t));
-    myCheckCudaError;
-    cudaMalloc(&_dev1Ctrls, _numEntriesCtrl * _numSNPs * sizeof(uint32_t));
-    myCheckCudaError;
-    cudaMalloc(&_dev2Ctrls, _numEntriesCtrl * _numSNPs * sizeof(uint32_t));
-    myCheckCudaError;
+    if (cudaSuccess != cudaMalloc(&_dev0Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMalloc(&_dev1Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMalloc(&_dev2Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMalloc(&_dev0Ctrls, _numEntriesCtrl * _numSNPs * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMalloc(&_dev1Ctrls, _numEntriesCtrl * _numSNPs * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMalloc(&_dev2Ctrls, _numEntriesCtrl * _numSNPs * sizeof(uint32_t)))
+        throw CUDAError(cudaGetLastError());
 
     // All the entries are cyclicly ordered by SNPs
-    cudaMemcpy(_dev0Cases, host0Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice);
-    myCheckCudaError;
-    cudaMemcpy(_dev1Cases, host1Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice);
-    myCheckCudaError;
-    cudaMemcpy(_dev2Cases, host2Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice);
-    myCheckCudaError;
-    cudaMemcpy(_dev0Ctrls, host0Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice);
-    myCheckCudaError;
-    cudaMemcpy(_dev1Ctrls, host1Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice);
-    myCheckCudaError;
-    cudaMemcpy(_dev2Ctrls, host2Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice);
-    myCheckCudaError;
+    if (cudaSuccess !=
+        cudaMemcpy(_dev0Cases, host0Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess !=
+        cudaMemcpy(_dev1Cases, host1Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess !=
+        cudaMemcpy(_dev2Cases, host2Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess !=
+        cudaMemcpy(_dev0Ctrls, host0Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess !=
+        cudaMemcpy(_dev1Ctrls, host1Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess !=
+        cudaMemcpy(_dev2Ctrls, host2Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
 }
 
 EntropySearch::~EntropySearch() {
-    if (_devIds) {
-        cudaFree(_devIds);
-        myCheckCudaError;
-    }
+    if (cudaSuccess != cudaFree(_devIds))
+        throw CUDAError(cudaGetLastError());
 
-    if (_dev0Cases) {
-        cudaFree(_dev0Cases);
-        myCheckCudaError;
-    }
-    if (_dev1Cases) {
-        cudaFree(_dev1Cases);
-        myCheckCudaError;
-    }
-    if (_dev2Cases) {
-        cudaFree(_dev2Cases);
-        myCheckCudaError;
-    }
-    if (_dev0Ctrls) {
-        cudaFree(_dev0Ctrls);
-        myCheckCudaError;
-    }
-    if (_dev1Ctrls) {
-        cudaFree(_dev1Ctrls);
-        myCheckCudaError;
-    }
-    if (_dev2Ctrls) {
-        cudaFree(_dev2Ctrls);
-        myCheckCudaError;
-    }
+    if (cudaSuccess != cudaFree(_dev0Cases))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFree(_dev1Cases))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFree(_dev2Cases))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFree(_dev0Ctrls))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFree(_dev1Ctrls))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFree(_dev2Ctrls))
+        throw CUDAError(cudaGetLastError());
 
-    if (_tables) {
-        for (int i = 0; i < NUM_PAIRS_BLOCK; i++) {
-            _tables[i].finalize();
-        }
-        cudaFreeHost(_tables);
-        myCheckCudaError;
+    for (int i = 0; i < NUM_PAIRS_BLOCK; i++) {
+        _tables[i].finalize();
     }
+    if (cudaSuccess != cudaFreeHost(_tables))
+        throw CUDAError(cudaGetLastError());
 
-    if (_devDoubleTables) {
-        cudaFree(_devDoubleTables);
-        myCheckCudaError;
-    }
+    if (cudaSuccess != cudaFree(_devDoubleTables))
+        throw CUDAError(cudaGetLastError());
 
-    if (_devMIValues) {
-        cudaFree(_devMIValues);
-        myCheckCudaError;
-    }
+    if (cudaSuccess != cudaFree(_devMIValues))
+        throw CUDAError(cudaGetLastError());
 
-    if (_hostMIValues) {
-        cudaFreeHost(_hostMIValues);
-        myCheckCudaError;
-    }
+    if (cudaSuccess != cudaFreeHost(_hostMIValues))
+        throw CUDAError(cudaGetLastError());
 
-    if (_devMiIds) {
-        cudaFree(_devMiIds);
-        myCheckCudaError;
-    }
+    if (cudaSuccess != cudaFree(_devMiIds))
+        throw CUDAError(cudaGetLastError());
 
-    if (_hostMiIds) {
-        cudaFreeHost(_hostMiIds);
-        myCheckCudaError;
-    }
+    if (cudaSuccess != cudaFreeHost(_hostMiIds))
+        throw CUDAError(cudaGetLastError());
 }
 
-void EntropySearch::mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutualInfo, float &minMI, uint16_t &minMIPos,
+void EntropySearch::mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutualInfo, float &minMI,
+                               uint16_t &minMIPos,
                                uint16_t &numEntriesWithMI) {
-    cudaMemcpy(_devIds, ids, numPairs * sizeof(uint2), cudaMemcpyHostToDevice);
-    myCheckCudaError;
+    if (cudaSuccess != cudaMemcpy(_devIds, ids, numPairs * sizeof(uint2), cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
 
     uint32_t nblocks = (numPairs + NUM_TH_PER_BLOCK - 1) / NUM_TH_PER_BLOCK;
     dim3 gridDouble(nblocks, 1);
@@ -2232,7 +2216,6 @@ void EntropySearch::mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutual
             _numEntriesCase, _numEntriesCtrl, _devIds,
             _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
             _devDoubleTables);
-    myCheckCudaError;
 
     // Now you need to calculate the MI for each triple
     // Each block performs all the triples for one pair
@@ -2243,20 +2226,23 @@ void EntropySearch::mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutual
     sharedSize += _numOutputs * NUM_TH_PER_BLOCK * (sizeof(float) + sizeof(uint32_t));
 
     if (_isMI) {
-        _kernelTripleMI << < gridMI, blockMI, sharedSize >> > (numPairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
-                _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
-                _devDoubleTables, _numOutputs, _devMIValues, _devMiIds);
+        _kernelTripleMI << < gridMI, blockMI, sharedSize >> >
+                                              (numPairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
+                                                      _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
+                                                      _devDoubleTables, _numOutputs, _devMIValues, _devMiIds);
     } else {
-        _kernelTripleIG << < gridMI, blockMI, sharedSize >> > (numPairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
-                _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
-                _devDoubleTables, _numOutputs, _devMIValues, _devMiIds);
+        _kernelTripleIG << < gridMI, blockMI, sharedSize >> >
+                                              (numPairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
+                                                      _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
+                                                      _devDoubleTables, _numOutputs, _devMIValues, _devMiIds);
     }
-    myCheckCudaError;
 
-    cudaMemcpy(_hostMIValues, _devMIValues, numPairs * _numOutputs * sizeof(float), cudaMemcpyDeviceToHost);
-    myCheckCudaError;
-    cudaMemcpy(_hostMiIds, _devMiIds, numPairs * _numOutputs * sizeof(uint3), cudaMemcpyDeviceToHost);
-    myCheckCudaError;
+    if (cudaSuccess != cudaMemcpy(_hostMIValues, _devMIValues, numPairs * _numOutputs * sizeof(float),
+                                  cudaMemcpyDeviceToHost))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMemcpy(_hostMiIds, _devMiIds, numPairs * _numOutputs * sizeof(uint3),
+                                  cudaMemcpyDeviceToHost))
+        throw CUDAError(cudaGetLastError());
 
     _findNHighestMI(mutualInfo, numPairs * _numOutputs, minMI, minMIPos, numEntriesWithMI);
 }
