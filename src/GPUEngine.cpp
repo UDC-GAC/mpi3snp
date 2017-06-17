@@ -8,7 +8,6 @@
 #include "GPUEngine.h"
 #include "ThreadParams.h"
 #include "EntropySearch.h"
-#include "CUDAError.h"
 #include <float.h>
 #include <cstring>
 
@@ -30,8 +29,8 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, std::vector<un
             throw CUDAError(cudaGetLastError());
         if (gpu_prop.major < 2 || !gpu_prop.canMapHostMemory) {
             throw CUDAError("GPU " + std::to_string(id) + " does not meet compute capabilities\n" +
-                                "Name: " + gpu_prop.name + "\n" + "Compute capability: " +
-                                std::to_string(gpu_prop.major) + "." + std::to_string(gpu_prop.minor));
+                            "Name: " + gpu_prop.name + "\n" + "Compute capability: " +
+                            std::to_string(gpu_prop.major) + "." + std::to_string(gpu_prop.minor));
         }
     }
 }
@@ -71,17 +70,6 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     std::sort(auxMutualInfo, auxMutualInfo + num_outputs * gpu_ids.size());
     mutual_info.resize(num_outputs);
     memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (gpu_ids.size() - 1), sizeof(MutualInfo) * num_outputs);
-
-
-#ifdef DEBUG
-    uint32_t numAnalyzed = 0;
-
-    for(int tid=0; tid<_options->getNumGPUs(); tid++){
-        numAnalyzed+=_threadParams[tid]->_numAnalyzed;
-    }
-
-    Utils::log("Total analysis: %" PRIu64 "\n", numAnalyzed);
-#endif
 
     // Release the distributor
     delete[] auxMutualInfo;
@@ -140,14 +128,12 @@ void *GPUEngine::handle(void *arg) {
     uint64_t myTotalAnal = 0;
     uint64_t numPairsBlock = 0;
 
-#ifdef BENCHMARKING
     std::string timer_label;
     timer_label += "GPU " + std::to_string(gpu_id) + " runtime";
     std::string analysis_label;
     analysis_label += "GPU " + std::to_string(gpu_id) + " analysis";
 
     statistics.Begin_timer(timer_label);
-#endif
 
     while (moreAnal) {
         // Take some SNPs
@@ -160,12 +146,10 @@ void *GPUEngine::handle(void *arg) {
         }
     }
 
-#ifdef BENCHMARKING
     cudaDeviceSynchronize();
 
     statistics.End_timer(timer_label);
     statistics.Add_value(analysis_label, myTotalAnal);
-#endif
 
     if (cudaSuccess != cudaFreeHost(auxIds))
         throw CUDAError(cudaGetLastError());
