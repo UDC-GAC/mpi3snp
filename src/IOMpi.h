@@ -23,7 +23,7 @@ public:
         return inst;
     }
 
-    static void Deallocate_MPI_resources(){
+    static void Deallocate_MPI_resources() {
         MPI_Comm_free(&IOMpi::Instance().io_comm);
     }
 
@@ -35,7 +35,11 @@ public:
 
     int Cprintf(const char *format, ...);
 
+    int Cfprintf(std::ostream &ostream, const char *format, ...);
+
     int Mprintf(const char *format, ...);
+
+    int Mfprintf(std::ostream &ostream, const char *format, ...);
 
 protected:
     /* Methods */

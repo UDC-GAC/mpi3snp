@@ -44,6 +44,15 @@ int IOMpi::Get_io_rank() {
 
 // Collective printf
 int IOMpi::Cprintf(const char *format, ...) {
+    int c;
+    va_list args;
+    va_start(args, format);
+    c = Cfprintf(std::cout, format, args);
+    va_end(args);
+    return c;
+}
+
+int IOMpi::Cfprintf(std::ostream &ostream, const char *format, ...) {
     va_list args;
     int tag, charcount = 0;
 
@@ -62,7 +71,7 @@ int IOMpi::Cprintf(const char *format, ...) {
                 char str[str_size + 1];
                 vsprintf(str, format, args);
                 va_end(args);
-                std::cout << "Process " + std::to_string(my_rank) + " > " << str;
+                ostream << "Process " + std::to_string(my_rank) + " > " << str;
                 charcount += str_size;
             } else {
                 if (MPI_Mprobe(i, tag, io_comm, &message, &status) != MPI_SUCCESS) {
@@ -73,11 +82,11 @@ int IOMpi::Cprintf(const char *format, ...) {
                 if (MPI_Mrecv(str, count, MPI_CHAR, &message, NULL) != MPI_SUCCESS) {
                     return -1;
                 }
-                std::cout << "Process " + std::to_string(i) + " > " << str;
+                ostream << "Process " + std::to_string(i) + " > " << str;
                 charcount += count;
             }
         }
-        std::flush(std::cout);
+        std::flush(ostream);
     } else {
         va_start(args, format);
         const int str_size = snprintf(nullptr, 0, format, args);
@@ -93,7 +102,16 @@ int IOMpi::Cprintf(const char *format, ...) {
 }
 
 int IOMpi::Mprintf(const char *format, ...) {
-    if (my_rank != 0) {
+    int c;
+    va_list args;
+    va_start(args, format);
+    c = Mfprintf(std::cout, format, args);
+    va_end(args);
+    return c;
+}
+
+int IOMpi::Mfprintf(std::ostream &ostream, const char *format, ...) {
+    if (my_rank != io_rank) {
         return 0;
     }
 
@@ -103,7 +121,7 @@ int IOMpi::Mprintf(const char *format, ...) {
     char str[str_size + 1];
     vsprintf(str, format, args);
     va_end(args);
-    std::cout << str;
-    std::flush(std::cout);
+    ostream << str;
+    std::flush(ostream);
     return str_size;
 }
