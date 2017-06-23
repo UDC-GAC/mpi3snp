@@ -30,6 +30,8 @@ public:
 
     std::vector<std::pair<std::string, int>> Get_all_values();
 
+    std::string To_string();
+
 private:
     std::vector<std::tuple<std::string, double, bool>>::const_iterator Find_timer_label(const std::string &label);
 

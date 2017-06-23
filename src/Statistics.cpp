@@ -116,3 +116,16 @@ std::vector<std::pair<std::string, int>> Statistics::Get_all_values() {
     pthread_mutex_unlock(&values_mutex);
     return out;
 }
+
+std::string Statistics::To_string() {
+    std::string output("Statistics\n");
+    auto timers = Get_all_timers();
+    for (auto it = timers.begin(); it < timers.end(); it++) {
+        output += "\t" + it->first + ": " + std::to_string(it->second) + " seconds\n";
+    }
+    auto values = Get_all_values();
+    for (auto it = values.begin(); it < values.end(); it++) {
+        output += "\t" + it->first + ": " + std::to_string(it->second) + "\n";
+    }
+    return output;
+}
