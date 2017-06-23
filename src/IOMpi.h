@@ -46,14 +46,12 @@ protected:
     int Get_io_rank();
 
     /* Attributes */
-    static const unsigned int BUFFER_SIZE = 1024;
     static const int DEFAULT_IO_PROC = 0;
 
     MPI_Comm io_comm;
     int io_rank, my_rank, comm_size;
     int cprintf_tag;
     pthread_mutex_t cprintf_mutex;
-    char *io_buff;
 };
 
 
