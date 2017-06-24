@@ -33,13 +33,41 @@ public:
     IOMpi &operator=(IOMpi const &) = delete;  // Copy assign
     IOMpi &operator=(IOMpi &&) = delete;      // Move assign
 
-    int Cprintf(const char *format, ...);
+    inline int Cprintf(const char *format, ...) {
+        va_list list;
+        int c = 0;
+        va_start(list, format);
+        c = Cfprintf_list(std::cout, format, list);
+        va_end(list);
+        return c;
+    }
 
-    int Cfprintf(std::ostream &ostream, const char *format, ...);
+    inline int Cfprintf(std::ostream &ostream, const char *format, ...){
+        va_list list;
+        int c = 0;
+        va_start(list, format);
+        c = Cfprintf_list(ostream, format, list);
+        va_end(list);
+        return c;
+    }
 
-    int Mprintf(const char *format, ...);
+    inline int Mprintf(const char *format, ...){
+        va_list list;
+        int c = 0;
+        va_start(list, format);
+        c = Mfprintf_list(std::cout, format, list);
+        va_end(list);
+        return c;
+    }
 
-    int Mfprintf(std::ostream &ostream, const char *format, ...);
+    inline int Mfprintf(std::ostream &ostream, const char *format, ...){
+        va_list list;
+        int c = 0;
+        va_start(list, format);
+        c = Mfprintf_list(ostream, format, list);
+        va_end(list);
+        return c;
+    }
 
 protected:
     /* Methods */
@@ -48,6 +76,10 @@ protected:
     ~IOMpi();
 
     int Get_io_rank();
+
+    int Cfprintf_list(std::ostream &ostream, const char *format, va_list &list);
+
+    int Mfprintf_list(std::ostream &ostream, const char *format, va_list &list);
 
     /* Attributes */
     static const int DEFAULT_IO_PROC = 0;

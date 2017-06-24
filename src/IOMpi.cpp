@@ -42,18 +42,8 @@ int IOMpi::Get_io_rank() {
     return io_rank;
 }
 
-// Collective printf
-int IOMpi::Cprintf(const char *format, ...) {
-    int c;
-    va_list args;
-    va_start(args, format);
-    c = Cfprintf(std::cout, format, args);
-    va_end(args);
-    return c;
-}
 
-int IOMpi::Cfprintf(std::ostream &ostream, const char *format, ...) {
-    va_list args;
+int IOMpi::Cfprintf_list(std::ostream &ostream, const char *format, va_list &list){
     int tag, charcount = 0;
 
     pthread_mutex_lock(&cprintf_mutex);
@@ -66,11 +56,9 @@ int IOMpi::Cfprintf(std::ostream &ostream, const char *format, ...) {
         int count;
         for (int i = 0; i < comm_size; i++) {
             if (i == my_rank) {
-                va_start(args, format);
-                const int str_size = snprintf(nullptr, 0, format, args);
+                const int str_size = snprintf(nullptr, 0, format, list);
                 char str[str_size + 1];
-                vsprintf(str, format, args);
-                va_end(args);
+                vsprintf(str, format, list);
                 ostream << "Process " + std::to_string(my_rank) + " > " << str;
                 charcount += str_size;
             } else {
@@ -88,11 +76,9 @@ int IOMpi::Cfprintf(std::ostream &ostream, const char *format, ...) {
         }
         std::flush(ostream);
     } else {
-        va_start(args, format);
-        const int str_size = snprintf(nullptr, 0, format, args);
+        const int str_size = snprintf(nullptr, 0, format, list);
         char str[str_size + 1];
-        vsprintf(str, format, args);
-        va_end(args);
+        vsprintf(str, format, list);
         if (MPI_Send(str, str_size + 1, MPI_CHAR, io_rank, tag, io_comm) != MPI_SUCCESS) {
             return -1;
         }
@@ -101,26 +87,14 @@ int IOMpi::Cfprintf(std::ostream &ostream, const char *format, ...) {
     return charcount;
 }
 
-int IOMpi::Mprintf(const char *format, ...) {
-    int c;
-    va_list args;
-    va_start(args, format);
-    c = Mfprintf(std::cout, format, args);
-    va_end(args);
-    return c;
-}
-
-int IOMpi::Mfprintf(std::ostream &ostream, const char *format, ...) {
+int IOMpi::Mfprintf_list(std::ostream &ostream, const char *format, va_list &list) {
     if (my_rank != io_rank) {
         return 0;
     }
 
-    va_list args;
-    va_start(args, format);
-    const int str_size = snprintf(nullptr, 0, format, args);
+    const int str_size = snprintf(nullptr, 0, format, list);
     char str[str_size + 1];
-    vsprintf(str, format, args);
-    va_end(args);
+    vsprintf(str, format, list);
     ostream << str;
     std::flush(ostream);
     return str_size;
