@@ -15,142 +15,37 @@
  */
 
 struct GPUDoubleContTable {
-    GPUDoubleContTable() {
-
-    }
-
-    ~GPUDoubleContTable() {
-    }
-
     void initialize(uint16_t numEntriesCase, uint16_t numEntriesCtrl) {
-
-        if (cudaSuccess != cudaMalloc(&_cases00, numEntriesCase * sizeof(uint32_t)))
+        if (cudaSuccess != cudaMalloc(&base_address, (9 * numEntriesCase + 9 * numEntriesCtrl) * sizeof(uint32_t))) {
             throw CUDAError(cudaGetLastError());
+        }
 
-        if (cudaSuccess != cudaMalloc(&_cases01, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_cases02, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_cases10, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_cases11, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_cases12, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_cases20, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_cases21, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_cases22, numEntriesCase * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls00, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls01, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls02, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls10, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls11, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls12, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls20, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls21, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
-
-        if (cudaSuccess != cudaMalloc(&_ctrls22, numEntriesCtrl * sizeof(uint32_t)))
-            throw CUDAError(cudaGetLastError());
+        _cases00 = base_address;
+        _cases01 = base_address + numEntriesCase;
+        _cases02 = base_address + 2 * numEntriesCase;
+        _cases10 = base_address + 3 * numEntriesCase;
+        _cases11 = base_address + 4 * numEntriesCase;
+        _cases12 = base_address + 5 * numEntriesCase;
+        _cases20 = base_address + 6 * numEntriesCase;
+        _cases21 = base_address + 7 * numEntriesCase;
+        _cases22 = base_address + 8 * numEntriesCase;
+        uint32_t *temp_addr = base_address + 9 * numEntriesCase;
+        _ctrls00 = temp_addr;
+        _ctrls01 = temp_addr + numEntriesCtrl;
+        _ctrls02 = temp_addr + 2 * numEntriesCtrl;
+        _ctrls10 = temp_addr + 3 * numEntriesCtrl;
+        _ctrls11 = temp_addr + 4 * numEntriesCtrl;
+        _ctrls12 = temp_addr + 5 * numEntriesCtrl;
+        _ctrls20 = temp_addr + 6 * numEntriesCtrl;
+        _ctrls21 = temp_addr + 7 * numEntriesCtrl;
+        _ctrls22 = temp_addr + 8 * numEntriesCtrl;
     }
 
     void finalize() {
-        if (_cases00) {
-            if (cudaSuccess != cudaFree(_cases00))
+        if (base_address != nullptr) {
+            if (cudaSuccess != cudaFree(base_address)) {
                 throw CUDAError(cudaGetLastError());
-        }
-        if (_cases01) {
-            if (cudaSuccess != cudaFree(_cases01))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_cases02) {
-            if (cudaSuccess != cudaFree(_cases02))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_cases10) {
-            if (cudaSuccess != cudaFree(_cases10))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_cases11) {
-            if (cudaSuccess != cudaFree(_cases11))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_cases12) {
-            if (cudaSuccess != cudaFree(_cases12))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_cases20) {
-            if (cudaSuccess != cudaFree(_cases20))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_cases21) {
-            if (cudaSuccess != cudaFree(_cases21))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_cases22) {
-            if (cudaSuccess != cudaFree(_cases22))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls00) {
-            if (cudaSuccess != cudaFree(_ctrls00))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls01) {
-            if (cudaSuccess != cudaFree(_ctrls01))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls02) {
-            if (cudaSuccess != cudaFree(_ctrls02))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls10) {
-            if (cudaSuccess != cudaFree(_ctrls10))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls11) {
-            if (cudaSuccess != cudaFree(_ctrls11))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls12) {
-            if (cudaSuccess != cudaFree(_ctrls12))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls20) {
-            if (cudaSuccess != cudaFree(_ctrls20))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls21) {
-            if (cudaSuccess != cudaFree(_ctrls21))
-                throw CUDAError(cudaGetLastError());
-        }
-        if (_ctrls22) {
-            if (cudaSuccess != cudaFree(_ctrls22))
-                throw CUDAError(cudaGetLastError());
+            }
         }
     }
 
@@ -172,6 +67,9 @@ struct GPUDoubleContTable {
     uint32_t *_ctrls20;
     uint32_t *_ctrls21;
     uint32_t *_ctrls22;
+
+private:
+    uint32_t *base_address = nullptr;
 };
 
 
