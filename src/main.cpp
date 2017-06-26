@@ -14,6 +14,9 @@ GPUSearchMI *configure_search(int &argc, char **argv){
                                              {'n', "num-out"});
     args::ValueFlag<bool> use_mi(parser, "mutual-info", "use Mutual Information (the alternative is Information Gain,"
             " default = 1)", {"mi"}, true);
+    args::Group verb(parser, "Verbosity level", args::Group::Validators::AtMostOne);
+    args::Flag verb_b(verb, "benchmarking", "print runtimes", {"benchmarking"});
+    args::Flag verb_d(verb, "debug", "print debug information", {"debug"});
     args::VersionFlag version(parser, "version", "output version information and exit", {'V', "version"});
     args::HelpFlag help(parser, "help", "display this help and exit", {'h', "help"});
 
@@ -39,6 +42,13 @@ GPUSearchMI *configure_search(int &argc, char **argv){
         std::cerr << e.what() << std::endl;
         std::cerr << parser;
         return nullptr;
+    }
+
+    if (verb_b){
+        IOMpi::Instance().Set_print_level(IOMpi::B);
+    }
+    if (verb_d){
+        IOMpi::Instance().Set_print_level(IOMpi::D);
     }
 
     GPUSearchMI::Builder builder = GPUSearchMI::Builder(args::get(tped), args::get(tfam), args::get(output));
@@ -71,7 +81,7 @@ int main(int argc, char **argv) {
     search->execute();
 
     etime = MPI_Wtime();
-    IOMpi::Instance().Mprintf("Overall time: %.2f seconds\n", etime - stime);
+    IOMpi::Instance().Mprintf<IOMpi::B>("Overall time: %.2f seconds\n", etime - stime);
 
     delete search;
 
