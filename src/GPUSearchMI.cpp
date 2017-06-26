@@ -61,9 +61,9 @@ void GPUSearchMI::execute() {
         GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, gpu_ids, use_mi);
         gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
-        IOMpi::Instance().Mfprintf(std::cerr, (std::string(e.what()) + "\n").c_str());
+        IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
     } catch (const CUDAError &e) {
-        IOMpi::Instance().Mfprintf(std::cerr, (std::string(e.what()) + "\n").c_str());
+        IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
     }
 
     if (proc_id == 0) {
@@ -89,7 +89,7 @@ void GPUSearchMI::execute() {
         MPI_Send(&mutual_info[0], num_outputs, MPI_MUTUAL_INFO, 0, 123, MPI_COMM_WORLD);
     }
 
-    IOMpi::Instance().Cprintf("3-SNP analysis finalized\n");
+    IOMpi::Instance().Cprintf<IOMpi::D>("3-SNP analysis finalized\n");
     // Print runtime statistics to stdout
-    IOMpi::Instance().Cprintf(statistics.To_string().c_str());
+    IOMpi::Instance().Cprintf<IOMpi::B>(statistics.To_string().c_str());
 }
