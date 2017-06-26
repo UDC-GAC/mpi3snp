@@ -18,9 +18,20 @@
 
 class IOMpi {
 public:
+    enum Level {
+        E = 0, // Error
+        N = 1, // None
+        B = 2, // Benchmarking
+        D = 3  // Debug
+    };
+
     static IOMpi &Instance() {
         static IOMpi inst;
         return inst;
+    }
+
+    static void Set_print_level(Level l) {
+        Instance().level = l;
     }
 
     static void Deallocate_MPI_resources() {
@@ -33,39 +44,51 @@ public:
     IOMpi &operator=(IOMpi const &) = delete;  // Copy assign
     IOMpi &operator=(IOMpi &&) = delete;      // Move assign
 
+    template<Level l>
     inline int Cprintf(const char *format, ...) {
-        va_list list;
         int c = 0;
-        va_start(list, format);
-        c = Cfprintf_list(std::cout, format, list);
-        va_end(list);
+        if (l <= level) {
+            va_list list;
+            va_start(list, format);
+            c = Cfprintf_list(std::cout, format, list);
+            va_end(list);
+        }
         return c;
     }
 
-    inline int Cfprintf(std::ostream &ostream, const char *format, ...){
-        va_list list;
+    template<Level l>
+    inline int Cfprintf(std::ostream &ostream, const char *format, ...) {
         int c = 0;
-        va_start(list, format);
-        c = Cfprintf_list(ostream, format, list);
-        va_end(list);
+        if (l <= level) {
+            va_list list;
+            va_start(list, format);
+            c = Cfprintf_list(ostream, format, list);
+            va_end(list);
+        }
         return c;
     }
 
-    inline int Mprintf(const char *format, ...){
-        va_list list;
+    template<Level l>
+    inline int Mprintf(const char *format, ...) {
         int c = 0;
-        va_start(list, format);
-        c = Mfprintf_list(std::cout, format, list);
-        va_end(list);
+        if (l <= level) {
+            va_list list;
+            va_start(list, format);
+            c = Mfprintf_list(std::cout, format, list);
+            va_end(list);
+        }
         return c;
     }
 
-    inline int Mfprintf(std::ostream &ostream, const char *format, ...){
-        va_list list;
+    template<Level l>
+    inline int Mfprintf(std::ostream &ostream, const char *format, ...) {
         int c = 0;
-        va_start(list, format);
-        c = Mfprintf_list(ostream, format, list);
-        va_end(list);
+        if (l <= level) {
+            va_list list;
+            va_start(list, format);
+            c = Mfprintf_list(ostream, format, list);
+            va_end(list);
+        }
         return c;
     }
 
@@ -88,6 +111,7 @@ protected:
     int io_rank, my_rank, comm_size;
     int cprintf_tag;
     pthread_mutex_t cprintf_mutex;
+    Level level;
 };
 
 

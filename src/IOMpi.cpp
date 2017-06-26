@@ -11,6 +11,7 @@ IOMpi::IOMpi() {
     io_rank = Get_io_rank();
     cprintf_tag = 0;
     pthread_mutex_init(&cprintf_mutex, NULL);
+    level = N;
 }
 
 IOMpi::~IOMpi() {
