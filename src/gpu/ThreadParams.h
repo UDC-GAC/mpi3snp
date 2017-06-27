@@ -8,9 +8,9 @@
 #ifndef THREADPARAMS_H_
 #define THREADPARAMS_H_
 
-#include "MutualInfo.h"
-#include "Dataset.h"
-#include "Distributor.h"
+#include "../MutualInfo.h"
+#include "../Dataset.h"
+#include "../Distributor.h"
 
 struct ThreadParams {
     ThreadParams(unsigned int gpu_id, unsigned int num_outputs, Dataset &dataset, Distributor &dist, bool use_MI,

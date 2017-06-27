@@ -3,7 +3,7 @@
 //
 
 #include "EntropySearch.h"
-#include "Distributor.h"
+#include "../Distributor.h"
 #include <float.h>
 #include <algorithm>
 

@@ -5,7 +5,7 @@
 #ifndef MPI3SNP_ENTROPYSEARCH_H
 #define MPI3SNP_ENTROPYSEARCH_H
 
-#include "MutualInfo.h"
+#include "../MutualInfo.h"
 #include "GPUContTable.h"
 
 class EntropySearch {

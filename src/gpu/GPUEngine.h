@@ -8,8 +8,8 @@
 #ifndef GPUENGINE_H_
 #define GPUENGINE_H_
 
-#include "Statistics.h"
-#include "MutualInfo.h"
+#include "../Statistics.h"
+#include "../MutualInfo.h"
 
 class GPUEngine {
 public:
