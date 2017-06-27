@@ -146,7 +146,7 @@ int LineReader::readTFAMLine(MyFilePt& pt, uint32_t line){
 }
 
 
-bool LineReader::readTPEDLine(MyFilePt& pt, SNP* readSNP, uint32_t line, uint32_t numInds,
+bool LineReader::readTPEDLine(MyFilePt& pt, SNP2* readSNP, uint32_t line, uint32_t numInds,
 		bool* indsClass){
 	int ch;
 

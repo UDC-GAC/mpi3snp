@@ -5,12 +5,25 @@
  *      Author: gonzales
  */
 
-#include <fstream>
 #include "Search.h"
+#include "Definitions.h"
+
+#ifdef MPI3SNP_USE_GPU
+
 #include "gpu/GPUEngine.h"
+#include "gpu/CUDAError.h"
+
+#else
+
+#include "cpu/CPUEngine.h"
+
+#endif
+
+#include <fstream>
+#include <thread>
+#include "Statistics.h"
 #include "IOMpi.h"
 #include "Dataset.h"
-#include "gpu/CUDAError.h"
 
 Search::Builder::Builder(std::string tped_file, std::string tfam_file, std::string out_file) {
     search_obj = new Search();
@@ -31,6 +44,11 @@ Search::Builder &Search::Builder::Set_gpu_ids(std::vector<unsigned int> gpu_ids)
     return *this;
 }
 
+Search::Builder & Search::Builder::Set_cpu_threads(unsigned int threads) {
+    search_obj->cpu_threads = threads;
+    return *this;
+}
+
 Search::Builder &Search::Builder::Set_use_mi(bool use_mi) {
     search_obj->use_mi = use_mi;
     return *this;
@@ -41,6 +59,7 @@ Search *Search::Builder::Create_object() {
 }
 
 Search::Search() {
+    cpu_threads = std::thread::hardware_concurrency();
     MPI_Type_contiguous(sizeof(MutualInfo), MPI_CHAR, &MPI_MUTUAL_INFO);
     MPI_Type_commit(&MPI_MUTUAL_INFO);
 }
@@ -57,6 +76,7 @@ void Search::execute() {
     std::vector<MutualInfo> mutual_info;
     Statistics statistics;
 
+#ifdef MPI3SNP_USE_GPU
     try {
         GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, gpu_ids, use_mi);
         gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
@@ -65,6 +85,14 @@ void Search::execute() {
     } catch (const CUDAError &e) {
         IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
     }
+#else
+    try {
+        CPUEngine cpu_engine(num_proc, proc_id, cpu_threads, use_mi);
+        cpu_engine.execute(tped_file, tfam_file, mutual_info, num_outputs, statistics);
+    } catch (const Dataset::ReadError &e) {
+        IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
+    }
+#endif
 
     if (proc_id == 0) {
         // Gather all the results
@@ -80,7 +108,7 @@ void Search::execute() {
 
         // Write results to the output file
         std::ofstream of(out_file.c_str(), std::ios::out);
-        for (int i=0; i<num_outputs; i++) {
+        for (int i = 0; i < num_outputs; i++) {
             of << mutual_info[i].To_string() << '\n';
         }
         of.close();

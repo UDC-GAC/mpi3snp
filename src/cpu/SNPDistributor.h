@@ -9,16 +9,14 @@
 #define SNPDISTRIBUTOR_H_
 
 #include <mpi.h>
-#include "SNP.h"
-#include "Options.h"
+#include "SNP2.h"
 #include "MyFile.h"
 #include "LineReader.h"
-#include "MutualInfo.h"
 #include "BoolVector.h"
 
 class SNPDistributor {
 public:
-    SNPDistributor(Options *options);
+    SNPDistributor(int num_proc, int proc_id, int num_thread, std::string tped, std::string tfam);
 
     virtual ~SNPDistributor();
 
@@ -35,13 +33,6 @@ public:
         }
     }
 
-    inline void printMI(MutualInfo *info, uint16_t numOutputs) {
-        for (int i = numOutputs - 1; i >= 0; i--) {
-            MutualInfo auxInfo = info[i];
-            _lineReader->printMI(_fpOut, auxInfo._id1, auxInfo._id2, auxInfo._id3, auxInfo._mutualInfoValue);
-        }
-    }
-
     inline uint32_t getNumSnp() {
         return _snpSet.size();
     }
@@ -54,7 +45,7 @@ public:
         return bv.trueCount();
     }
 
-    inline vector<SNP *> getSnpSet() {
+    inline vector<SNP2 *> &getSnpSet() {
         return _snpSet;
     }
 
@@ -79,12 +70,10 @@ private:
 
     uint32_t _getPairsSNPsNoLock(uint32_t *ids);
 
-    Options *_options;
-    vector<SNP *> _snpSet;
+    vector<SNP2 *> _snpSet;
     // File handler
     MyFilePt _fpTfam;
     MyFilePt _fpTped;
-    MyFilePt _fpOut;
     LineReader *_lineReader;
     bool _withLock;
 
@@ -103,6 +92,8 @@ private:
     uint32_t *dist = NULL;
     uint32_t _iterDoubleSnp1;
     uint32_t _iterDoubleSnp2;
+
+    int num_proc, proc_id, num_threads;
 };
 
 #endif /* SNPDISTRIBUTOR_H_ */

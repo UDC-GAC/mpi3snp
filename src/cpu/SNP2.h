@@ -9,9 +9,9 @@
 #include "Utils.h"
 
 // Structure to store all the information of one SNP
-struct SNP
+struct SNP2
 {
-    SNP(){
+    SNP2(){
         _case0Values = NULL;
         _ctrl0Values = NULL;
         _case1Values = NULL;
@@ -22,7 +22,7 @@ struct SNP
         _nameLength = 0;
     }
 
-    ~SNP(){
+    ~SNP2(){
         if (_name){
             delete[] _name;
         }

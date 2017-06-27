@@ -9,8 +9,8 @@
 #define LINEREADER_H_
 
 #include "MyFile.h"
-#include "SNP.h"
-#include "IOMpi.h"
+#include "SNP2.h"
+#include "../IOMpi.h"
 
 class LineReader {
 public:
@@ -23,7 +23,7 @@ public:
 	int readTFAMLine(MyFilePt& pt, uint32_t line);
 
 	// Returns false if there is no more information
-	bool readTPEDLine(MyFilePt& pt, SNP* readSNP, uint32_t line, uint32_t numInds,
+	bool readTPEDLine(MyFilePt& pt, SNP2* readSNP, uint32_t line, uint32_t numInds,
 			bool* indsClass);
 
 	// To print the information of the interaction
@@ -55,7 +55,7 @@ private:
 		if (_fileBufferSentinel >= 0) {
 			_fileBuffer[--_fileBufferSentinel] = ch;
 		} else {
-			IOMpi::Instance().Mprintf("Two consecutive ungetc operations occurred\n");
+			IOMpi::Instance().Mprintf<IOMpi::D>("Two consecutive ungetc operations occurred\n");
 			return -1; /*an error occurred, return end-of-file marker*/
 		}
 		return ch;

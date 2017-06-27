@@ -5,438 +5,108 @@
  *      Author: gonzales
  */
 
-#include "Engine.h"
+#include <cfloat>
+#include "CPUEngine.h"
+#include "ThreadParams.h"
+#include "EntropySearch.h"
 
-Engine::Engine(Options* options) {
-	_options = options;
-
-	_numSNPs = 0;
-	_numCases = 0;
-	_numCtrls = 0;
-	_numEntriesCases = 0;
-	_numEntriesCtrls = 0;
-	_invInds = 0.0;
-
-	_entY = 0.0;
+CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
+    this->num_proc = num_proc;
+    this->proc_id = proc_id;
+    this->num_threads = num_threads;
+    this->use_mi = use_mi;
 }
 
-Engine::~Engine() {
+CPUEngine::~CPUEngine() {
 
 }
 
-uint64_t Engine::mutualInfo(vector<SNP*> snpSet, uint64_t numPairs, uint32_t* ids, MutualInfo* mutualInfo,
-		uint16_t numOutputs, float& minMI, uint16_t& minMIPos, uint16_t& numEntriesWithMI){
+void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vector<MutualInfo> &mutual_info,
+                        uint16_t num_outputs, Statistics &statistics) {
+    double stime = Utils::getSysTime();
+    double etime;
 
-	uint32_t id1, id2, id3;
-	float auxMIValue;
-	uint64_t numAnal = 0;
-	MutualInfo* auxMI;
-	DoubleContTable* doubleTable = new DoubleContTable(_numCases, _numCtrls);
-	TripleContTable tripleTable;
+    SNPDistributor distributor(num_proc, proc_id, num_threads, tped_file, tfam_file);
+    distributor.loadSNPSet();
 
-#ifdef BENCHMARKING_PARTS
-	double partTime;
-#endif
+    etime = Utils::getSysTime();
+    IOMpi::Instance().Cprintf<IOMpi::D>("Loaded %ld SNPs (%ld/%ld cases/controls) in %.2f seconds\n",
+                              distributor.getNumSnp(), distributor.getNumCases(), distributor.getNumCtrls(),
+                              etime - stime);
 
-	for(uint64_t iterPairs = 0; iterPairs<numPairs; iterPairs++){
+    vector<pthread_t> threadIDs(num_threads, 0);
 
-		id1 = ids[2*iterPairs];
-		id2 = ids[2*iterPairs+1];
+    // Computation of the single-SNP entropy
+    std::vector<ThreadParams *> params(num_threads);
+    for (int tid = 0; tid < num_threads; tid++) {
+        params[tid] = new ThreadParams(tid);
+        // All threads use the same distributor so it gives them the correct pair of SNPs
+        params[tid]->init(&distributor, num_outputs);
 
-		_fillDoubleContTable(snpSet[id1], snpSet[id2], doubleTable);
+        // Create thread entities that call to the functions below
+        if (pthread_create(&threadIDs[tid], NULL, threadMI, params[tid]) != 0) {
+            Utils::exit("Thread creating failed\n");
+        }
+    }
 
-#ifdef DOUBLE_SNP_ANALYSIS
-		auxMIValue = _calcDoubleMI(doubleTable);
+    MutualInfo *auxMutualInfo = new MutualInfo[num_threads * num_outputs];
 
-		// There are empty values in the array
-		if(numEntriesWithMI < numOutputs){
-			auxMI = &mutualInfo[numEntriesWithMI];
-			auxMI->_id1 = id1;
-			auxMI->_id2 = id2;
-			auxMI->_id3 = 0;
-			auxMI->_mutualInfoValue = auxMIValue;
+    // Wait for the completion of all threads
+    for (int tid = 0; tid < num_threads; tid++) {
+        pthread_join(threadIDs[tid], NULL);
+        memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->_mutualInfo,
+               num_outputs * sizeof(MutualInfo));
+        delete params[tid];
+    }
 
-			// If this is the minimum value of the array
-			if(auxMIValue<minMI){
-				minMI = auxMIValue;
-				minMIPos = numEntriesWithMI;
-			}
-
-			numEntriesWithMI++;
-		}
-		else if(auxMIValue>minMI){ // The value must be inserted
-			auxMI = &mutualInfo[minMIPos];
-			auxMI->_id1 = id1;
-			auxMI->_id2 = id2;
-			auxMI->_id3 = 0;
-			auxMI->_mutualInfoValue = auxMIValue;
-
-			// Find the new minimum
-			auxMI = min_element(mutualInfo, mutualInfo+numOutputs);
-			minMI = auxMI->_mutualInfoValue;
-			uint16_t i = 0;
-			while(1){
-				if(mutualInfo[i]._mutualInfoValue == minMI){
-					break;
-				}
-				i++;
-			}
-			minMIPos = i;
-		}
-#endif
-
-#ifdef TRIPLE_SNP_ANALYSIS
-		for(id3 = id2+1; id3<_numSNPs; id3++){
-			// Generate the contingency table of the 3-SNP
-			_fillTripleContTable(doubleTable, &tripleTable, snpSet[id3]);
-
-			// Calculate the MI with the contingency table
-			auxMIValue = _calcTripleMI(&tripleTable);
-
-			// There are empty values in the array
-			if(numEntriesWithMI < numOutputs){
-				auxMI = &mutualInfo[numEntriesWithMI];
-				auxMI->_id1 = id1;
-				auxMI->_id2 = id2;
-				auxMI->_id3 = id3;
-				auxMI->_mutualInfoValue = auxMIValue;
-
-				// If this is the minimum value of the array
-				if(auxMIValue<minMI){
-					minMI = auxMIValue;
-					minMIPos = numEntriesWithMI;
-				}
-
-				numEntriesWithMI++;
-			}
-			else if(auxMIValue>minMI){ // The value must be inserted
-				auxMI = &mutualInfo[minMIPos];
-				auxMI->_id1 = id1;
-				auxMI->_id2 = id2;
-				auxMI->_id3 = id3;
-				auxMI->_mutualInfoValue = auxMIValue;
-
-				// Find the new minimum
-				auxMI = min_element(mutualInfo, mutualInfo+numOutputs);
-				minMI = auxMI->_mutualInfoValue;
-				uint16_t i = 0;
-				while(1){
-					if(mutualInfo[i]._mutualInfoValue == minMI){
-						break;
-					}
-					i++;
-				}
-				minMIPos = i;
-			}
-
-			numAnal++;
-		}
-#endif
-	}
-
-	delete doubleTable;
-	return numAnal;
+    // Sort the auxiliar array and print the results
+    std::sort(auxMutualInfo, auxMutualInfo + num_outputs * num_threads);
+    mutual_info.resize(num_outputs);
+    memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (num_threads - 1), sizeof(MutualInfo) * num_outputs);
 }
 
-void Engine::_fillDoubleContTable(SNP* snp1, SNP* snp2, DoubleContTable* table){
+void* CPUEngine::threadMI(void *arg) {
+    ThreadParams *params = (ThreadParams *) arg;
+    uint16_t numOutputs = params->_numOutputs;
+    SNPDistributor *distributor = params->_distributor;
 
-	uint16_t sum00=0, sum01=0, sum02=0, sum10=0, sum11=0, sum12=0, sum20=0, sum21=0, sum22=0;
+    EntropySearch search(distributor->getNumSnp(), distributor->getNumCases(), distributor->getNumCtrls());
+    const vector<SNP2 *> &snpSet = distributor->getSnpSet();
+    // In this case the ids are necessary to access to the single-SNP entropy
+    uint32_t *auxIds = new uint32_t[2 * NUM_PAIRS_BLOCK];
 
-	for(int i=0; i<_numEntriesCases; i++){
-		table->_cases00[i] = snp1->_case0Values[i]&snp2->_case0Values[i];
-		table->_cases01[i] = snp1->_case0Values[i]&snp2->_case1Values[i];
-		table->_cases02[i] = snp1->_case0Values[i]&snp2->_case2Values[i];
-		table->_cases10[i] = snp1->_case1Values[i]&snp2->_case0Values[i];
-		table->_cases11[i] = snp1->_case1Values[i]&snp2->_case1Values[i];
-		table->_cases12[i] = snp1->_case1Values[i]&snp2->_case2Values[i];
-		table->_cases20[i] = snp1->_case2Values[i]&snp2->_case0Values[i];
-		table->_cases21[i] = snp1->_case2Values[i]&snp2->_case1Values[i];
-		table->_cases22[i] = snp1->_case2Values[i]&snp2->_case2Values[i];
-	}
+    // Variables to work with the outputs
+    MutualInfo *mutualInfo = new MutualInfo[numOutputs];
+    // The minimum value in the array
+    float minMI = FLT_MAX;
+    // The position of the minimum value
+    uint16_t minMIPos = 0;
+    // Number of entries of the array full
+    uint16_t numEntriesWithMI = 0;
 
-	for(int i=0; i<_numEntriesCtrls; i++){
-		table->_ctrls00[i] = snp1->_ctrl0Values[i]&snp2->_ctrl0Values[i];
-		table->_ctrls01[i] = snp1->_ctrl0Values[i]&snp2->_ctrl1Values[i];
-		table->_ctrls02[i] = snp1->_ctrl0Values[i]&snp2->_ctrl2Values[i];
-		table->_ctrls10[i] = snp1->_ctrl1Values[i]&snp2->_ctrl0Values[i];
-		table->_ctrls11[i] = snp1->_ctrl1Values[i]&snp2->_ctrl1Values[i];
-		table->_ctrls12[i] = snp1->_ctrl1Values[i]&snp2->_ctrl2Values[i];
-		table->_ctrls20[i] = snp1->_ctrl2Values[i]&snp2->_ctrl0Values[i];
-		table->_ctrls21[i] = snp1->_ctrl2Values[i]&snp2->_ctrl1Values[i];
-		table->_ctrls22[i] = snp1->_ctrl2Values[i]&snp2->_ctrl2Values[i];
-	}
+    bool moreAnal = true;
+    uint64_t myTotalAnal = 0;
+    uint64_t numPairsBlock = 0;
+    double stime = Utils::getSysTime();
+
+    while (moreAnal) {
+        // Take some SNPs
+        numPairsBlock = distributor->getPairsSNPs(auxIds);
+
+        if (numPairsBlock) {
+            myTotalAnal += search.mutualInfo(snpSet, numPairsBlock, auxIds, mutualInfo, numOutputs, minMI,
+                                              minMIPos, numEntriesWithMI);
+        } else {
+            moreAnal = false;
+        }
+    }
+
+    params->_numAnalyzed = myTotalAnal;
+    params->_runtime = Utils::getSysTime() - stime;
+    memcpy(params->_mutualInfo, mutualInfo, numOutputs * sizeof(MutualInfo));
+
+    delete[] auxIds;
+    delete[] mutualInfo;
+    return NULL;
 }
 
-float Engine::_calcDoubleMI(DoubleContTable* table){
-
-	uint32_t contCases[9];
-	uint32_t contCtrls[9];
-
-	for(int i=0; i<9; i++){
-		contCases[i] = 0;
-		contCtrls[i] = 0;
-	}
-
-	for(int i=0; i<_numEntriesCases; i++){
-		contCases[0] += Utils::popcount(table->_cases00[i]);
-		contCases[1] += Utils::popcount(table->_cases01[i]);
-		contCases[2] += Utils::popcount(table->_cases02[i]);
-		contCases[3] += Utils::popcount(table->_cases10[i]);
-		contCases[4] += Utils::popcount(table->_cases11[i]);
-		contCases[5] += Utils::popcount(table->_cases12[i]);
-		contCases[6] += Utils::popcount(table->_cases20[i]);
-		contCases[7] += Utils::popcount(table->_cases21[i]);
-		contCases[8] += Utils::popcount(table->_cases22[i]);
-	}
-	for(int i=0; i<_numEntriesCtrls; i++){
-		contCtrls[0] += Utils::popcount(table->_ctrls00[i]);
-		contCtrls[1] += Utils::popcount(table->_ctrls01[i]);
-		contCtrls[2] += Utils::popcount(table->_ctrls02[i]);
-		contCtrls[3] += Utils::popcount(table->_ctrls10[i]);
-		contCtrls[4] += Utils::popcount(table->_ctrls11[i]);
-		contCtrls[5] += Utils::popcount(table->_ctrls12[i]);
-		contCtrls[6] += Utils::popcount(table->_ctrls20[i]);
-		contCtrls[7] += Utils::popcount(table->_ctrls21[i]);
-		contCtrls[8] += Utils::popcount(table->_ctrls22[i]);
-	}
-
-	float entX = 0.0;
-	float entAll = 0.0;
-	float pCase, pCtrl;
-
-	for(int i=0; i<9; i++){
-		pCase = contCases[i]*_invInds;
-		if(pCase != 0.0){
-			entAll -= pCase*log2(pCase);
-		}
-
-		pCtrl = contCtrls[i]*_invInds;
-		if(pCtrl != 0.0){
-			entAll -= pCtrl*log2(pCtrl);
-		}
-
-		pCase += pCtrl;
-		if(pCase != 0.0){
-			entX -= pCase*log2(pCase);
-		}
-	}
-
-	return entX+_entY-entAll;
-}
-
-void Engine::_fillTripleContTable(DoubleContTable* doubleTable, TripleContTable* tripleTable, SNP* snp3){
-
-	uint32_t aux;
-	uint32_t auxSNP3Value;
-
-	tripleTable->clearValues();
-
-	for(int i=0; i<_numEntriesCases; i++){
-		auxSNP3Value = snp3->_case0Values[i];
-
-		aux = doubleTable->_cases00[i]&auxSNP3Value;
-		tripleTable->_cases[0] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases01[i]&auxSNP3Value;
-		tripleTable->_cases[1] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases02[i]&auxSNP3Value;
-		tripleTable->_cases[2] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases10[i]&auxSNP3Value;
-		tripleTable->_cases[3] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases11[i]&auxSNP3Value;
-		tripleTable->_cases[4] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases12[i]&auxSNP3Value;
-		tripleTable->_cases[5] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases20[i]&auxSNP3Value;
-		tripleTable->_cases[6] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases21[i]&auxSNP3Value;
-		tripleTable->_cases[7] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases22[i]&auxSNP3Value;
-		tripleTable->_cases[8] += Utils::popcount(aux);
-
-
-		auxSNP3Value = snp3->_case1Values[i];
-
-		aux = doubleTable->_cases00[i]&auxSNP3Value;
-		tripleTable->_cases[9] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases01[i]&auxSNP3Value;
-		tripleTable->_cases[10] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases02[i]&auxSNP3Value;
-		tripleTable->_cases[11] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases10[i]&auxSNP3Value;
-		tripleTable->_cases[12] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases11[i]&auxSNP3Value;
-		tripleTable->_cases[13] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases12[i]&auxSNP3Value;
-		tripleTable->_cases[14] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases20[i]&auxSNP3Value;
-		tripleTable->_cases[15] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases21[i]&auxSNP3Value;
-		tripleTable->_cases[16] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases22[i]&auxSNP3Value;
-		tripleTable->_cases[17] += Utils::popcount(aux);
-
-
-		auxSNP3Value = snp3->_case2Values[i];
-
-		aux = doubleTable->_cases00[i]&auxSNP3Value;
-		tripleTable->_cases[18] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases01[i]&auxSNP3Value;
-		tripleTable->_cases[19] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases02[i]&auxSNP3Value;
-		tripleTable->_cases[20] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases10[i]&auxSNP3Value;
-		tripleTable->_cases[21] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases11[i]&auxSNP3Value;
-		tripleTable->_cases[22] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases12[i]&auxSNP3Value;
-		tripleTable->_cases[23] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases20[i]&auxSNP3Value;
-		tripleTable->_cases[24] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases21[i]&auxSNP3Value;
-		tripleTable->_cases[25] += Utils::popcount(aux);
-
-		aux = doubleTable->_cases22[i]&auxSNP3Value;
-		tripleTable->_cases[26] += Utils::popcount(aux);
-	}
-
-	for(int i=0; i<_numEntriesCtrls; i++){
-		auxSNP3Value = snp3->_ctrl0Values[i];
-
-		aux = doubleTable->_ctrls00[i]&auxSNP3Value;
-		tripleTable->_ctrls[0] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls01[i]&auxSNP3Value;
-		tripleTable->_ctrls[1] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls02[i]&auxSNP3Value;
-		tripleTable->_ctrls[2] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls10[i]&auxSNP3Value;
-		tripleTable->_ctrls[3] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls11[i]&auxSNP3Value;
-		tripleTable->_ctrls[4] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls12[i]&auxSNP3Value;
-		tripleTable->_ctrls[5] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls20[i]&auxSNP3Value;
-		tripleTable->_ctrls[6] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls21[i]&auxSNP3Value;
-		tripleTable->_ctrls[7] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls22[i]&auxSNP3Value;
-		tripleTable->_ctrls[8] += Utils::popcount(aux);
-
-
-		auxSNP3Value = snp3->_ctrl1Values[i];
-
-		aux = doubleTable->_ctrls00[i]&auxSNP3Value;
-		tripleTable->_ctrls[9] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls01[i]&auxSNP3Value;
-		tripleTable->_ctrls[10] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls02[i]&auxSNP3Value;
-		tripleTable->_ctrls[11] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls10[i]&auxSNP3Value;
-		tripleTable->_ctrls[12] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls11[i]&auxSNP3Value;
-		tripleTable->_ctrls[13] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls12[i]&auxSNP3Value;
-		tripleTable->_ctrls[14] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls20[i]&auxSNP3Value;
-		tripleTable->_ctrls[15] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls21[i]&auxSNP3Value;
-		tripleTable->_ctrls[16] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls22[i]&auxSNP3Value;
-		tripleTable->_ctrls[17] += Utils::popcount(aux);
-
-
-		auxSNP3Value = snp3->_ctrl2Values[i];
-
-		aux = doubleTable->_ctrls00[i]&auxSNP3Value;
-		tripleTable->_ctrls[18] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls01[i]&auxSNP3Value;
-		tripleTable->_ctrls[19] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls02[i]&auxSNP3Value;
-		tripleTable->_ctrls[20] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls10[i]&auxSNP3Value;
-		tripleTable->_ctrls[21] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls11[i]&auxSNP3Value;
-		tripleTable->_ctrls[22] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls12[i]&auxSNP3Value;
-		tripleTable->_ctrls[23] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls20[i]&auxSNP3Value;
-		tripleTable->_ctrls[24] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls21[i]&auxSNP3Value;
-		tripleTable->_ctrls[25] += Utils::popcount(aux);
-
-		aux = doubleTable->_ctrls22[i]&auxSNP3Value;
-		tripleTable->_ctrls[26] += Utils::popcount(aux);
-	}
-}
-
-float Engine::_calcTripleMI(TripleContTable* table){
-
-	float entX = 0.0;
-	float entAll = 0.0;
-	float pCase, pCtrl;
-
-	for(int i=0; i<27; i++){
-
-		pCase = table->_cases[i]*_invInds;
-		if(pCase != 0.0){
-			entAll -= pCase*log2(pCase);
-		}
-
-		pCtrl = table->_ctrls[i]*_invInds;
-		if(pCtrl != 0.0){
-			entAll -= pCtrl*log2(pCtrl);
-		}
-
-		pCase += pCtrl;
-		if(pCase != 0.0){
-			entX -= pCase*log2(pCase);
-		}
-	}
-
-	return entX+_entY-entAll;
-}

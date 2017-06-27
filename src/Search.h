@@ -21,6 +21,8 @@ public:
 
         Builder &Set_gpu_ids(std::vector<unsigned int> gpu_ids);
 
+        Builder &Set_cpu_threads(unsigned int threads);
+
         Builder &Set_use_mi(bool use_mi);
 
         Search *Create_object();
@@ -40,6 +42,7 @@ private:
     std::string tped_file, tfam_file, out_file;
     unsigned int num_outputs;
     std::vector<unsigned int> gpu_ids;
+    unsigned int cpu_threads;
     bool use_mi;
 
     MPI_Datatype MPI_MUTUAL_INFO;

@@ -10,14 +10,12 @@
 
 #include "Macros.h"
 #include "SNPDistributor.h"
-#include "Engine.h"
-#include "MutualInfo.h"
+#include "../MutualInfo.h"
 
 struct ThreadParams {
-    ThreadParams(int tid, Engine *engine) {
+    ThreadParams(int tid) {
         _tid = tid;
-        _distributor = NULL;
-        _engine = engine;
+        _distributor = nullptr;
         _numOutputs = 0;
         _numAnalyzed = 0;
         _mutualInfo = NULL;
@@ -36,7 +34,6 @@ struct ThreadParams {
 
     int _tid;
     SNPDistributor *_distributor;
-    Engine *_engine;
 
     // Values for the return information
     uint16_t _numOutputs;

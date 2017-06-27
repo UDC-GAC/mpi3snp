@@ -3,20 +3,27 @@
 #include "Search.h"
 #include "args.hxx"
 
-Search *configure_search(int &argc, char **argv){
+Search *configure_search(int &argc, char **argv) {
     args::ArgumentParser parser(MPI3SNP_DESCRIPTION, MPI3SNP_HELP);
-    args::Group group(parser, "Required arguments", args::Group::Validators::All);
-    args::Positional<std::string> tped(group, "tped-file", "path to TPED file");
-    args::Positional<std::string> tfam(group, "tfam-file", "path to TFAM file");
-    args::Positional<std::string> output(group, "output-file", "path to output file");
-    args::ValueFlagList<unsigned int> gpu_ids(parser, "gpu-ids", "list of GPU ids to use", {'g', "gpu-id"});
+    args::Group required(parser, "Required arguments", args::Group::Validators::All);
+    args::Positional<std::string> r_tped(required, "tped-file", "path to TPED file");
+    args::Positional<std::string> r_tfam(required, "tfam-file", "path to TFAM file");
+    args::Positional<std::string> r_output(required, "output-file", "path to output file");
+#ifdef MPI3SNP_USE_GPU
+    args::Group gpu_opt(parser, "GPU runtime configuration", args::Group::Validators::DontCare);
+    args::ValueFlagList<unsigned int> gpu_ids(gpu_opt, "gpu-ids", "list of GPU ids to use", {'g', "gpu-id"});
+#else
+    args::Group cpu_opt(parser, "CPU runtime configuration", args::Group::Validators::DontCare);
+    args::ValueFlag<unsigned int> cpu_threads(cpu_opt, "thread-num", "number of threads to use per process",
+                                              {'t', "threads"});
+#endif
+    args::Group verb(parser, "Verbosity level", args::Group::Validators::AtMostOne);
+    args::Flag verb_b(verb, "benchmarking", "print runtimes", {"benchmarking"});
+    args::Flag verb_d(verb, "debug", "print debug information", {"debug"});
     args::ValueFlag<unsigned int> output_num(parser, "output-num", "number of triplets to print in the output file",
                                              {'n', "num-out"});
     args::ValueFlag<bool> use_mi(parser, "mutual-info", "use Mutual Information (the alternative is Information Gain,"
             " default = 1)", {"mi"}, true);
-    args::Group verb(parser, "Verbosity level", args::Group::Validators::AtMostOne);
-    args::Flag verb_b(verb, "benchmarking", "print runtimes", {"benchmarking"});
-    args::Flag verb_d(verb, "debug", "print debug information", {"debug"});
     args::VersionFlag version(parser, "version", "output version information and exit", {'V', "version"});
     args::HelpFlag help(parser, "help", "display this help and exit", {'h', "help"});
 
@@ -44,17 +51,23 @@ Search *configure_search(int &argc, char **argv){
         return nullptr;
     }
 
-    if (verb_b){
+    if (verb_b) {
         IOMpi::Instance().Set_print_level(IOMpi::B);
     }
-    if (verb_d){
+    if (verb_d) {
         IOMpi::Instance().Set_print_level(IOMpi::D);
     }
 
-    Search::Builder builder = Search::Builder(args::get(tped), args::get(tfam), args::get(output));
+    Search::Builder builder = Search::Builder(args::get(r_tped), args::get(r_tfam), args::get(r_output));
+#ifdef MPI3SNP_USE_GPU
     if (gpu_ids) {
         builder.Set_gpu_ids(args::get(gpu_ids));
     }
+#else
+    if (cpu_threads) {
+        builder.Set_cpu_threads(args::get(cpu_threads));
+    }
+#endif
     if (output_num) {
         builder.Set_num_outputs(args::get(output_num));
     }
@@ -72,9 +85,8 @@ int main(int argc, char **argv) {
     /*get the startup time*/
     stime = MPI_Wtime();
 
-    // TODO: 1.Select appropiate CPU/GPU implementation 2.Adequate arguments
     Search *search = configure_search(argc, argv);
-    if (search == nullptr){
+    if (search == nullptr) {
         IOMpi::Instance().Deallocate_MPI_resources();
         MPI_Finalize();
         return 0;
