@@ -11,7 +11,7 @@
 #include <mpi.h>
 #include <vector>
 
-class GPUSearchMI {
+class Search {
 public:
     class Builder {
     public:
@@ -23,19 +23,19 @@ public:
 
         Builder &Set_use_mi(bool use_mi);
 
-        GPUSearchMI *Create_object();
+        Search *Create_object();
 
     private:
-        GPUSearchMI *search_obj;
+        Search *search_obj;
     };
 
-    ~GPUSearchMI();
+    ~Search();
 
     // Execute the epistasis search
     void execute();
 
 private:
-    GPUSearchMI();
+    Search();
 
     std::string tped_file, tfam_file, out_file;
     unsigned int num_outputs;

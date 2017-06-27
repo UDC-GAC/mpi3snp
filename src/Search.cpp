@@ -6,14 +6,14 @@
  */
 
 #include <fstream>
-#include "GPUSearchMI.h"
-#include "GPUEngine.h"
+#include "Search.h"
+#include "gpu/GPUEngine.h"
 #include "IOMpi.h"
 #include "Dataset.h"
-#include "CUDAError.h"
+#include "gpu/CUDAError.h"
 
-GPUSearchMI::Builder::Builder(std::string tped_file, std::string tfam_file, std::string out_file) {
-    search_obj = new GPUSearchMI();
+Search::Builder::Builder(std::string tped_file, std::string tfam_file, std::string out_file) {
+    search_obj = new Search();
     search_obj->tped_file = tped_file;
     search_obj->tfam_file = tfam_file;
     search_obj->out_file = out_file;
@@ -21,35 +21,35 @@ GPUSearchMI::Builder::Builder(std::string tped_file, std::string tfam_file, std:
     search_obj->use_mi = true;
 }
 
-GPUSearchMI::Builder &GPUSearchMI::Builder::Set_num_outputs(unsigned int num_outputs) {
+Search::Builder &Search::Builder::Set_num_outputs(unsigned int num_outputs) {
     search_obj->num_outputs = num_outputs;
     return *this;
 }
 
-GPUSearchMI::Builder &GPUSearchMI::Builder::Set_gpu_ids(std::vector<unsigned int> gpu_ids) {
+Search::Builder &Search::Builder::Set_gpu_ids(std::vector<unsigned int> gpu_ids) {
     search_obj->gpu_ids = gpu_ids;
     return *this;
 }
 
-GPUSearchMI::Builder &GPUSearchMI::Builder::Set_use_mi(bool use_mi) {
+Search::Builder &Search::Builder::Set_use_mi(bool use_mi) {
     search_obj->use_mi = use_mi;
     return *this;
 }
 
-GPUSearchMI *GPUSearchMI::Builder::Create_object() {
+Search *Search::Builder::Create_object() {
     return search_obj;
 }
 
-GPUSearchMI::GPUSearchMI() {
+Search::Search() {
     MPI_Type_contiguous(sizeof(MutualInfo), MPI_CHAR, &MPI_MUTUAL_INFO);
     MPI_Type_commit(&MPI_MUTUAL_INFO);
 }
 
-GPUSearchMI::~GPUSearchMI() {
+Search::~Search() {
     MPI_Type_free(&MPI_MUTUAL_INFO);
 }
 
-void GPUSearchMI::execute() {
+void Search::execute() {
     int proc_id, num_proc;
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
