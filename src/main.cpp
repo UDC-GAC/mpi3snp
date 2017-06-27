@@ -1,9 +1,9 @@
 #include "Definitions.h"
 #include "IOMpi.h"
-#include "GPUSearchMI.h"
+#include "Search.h"
 #include "args.hxx"
 
-GPUSearchMI *configure_search(int &argc, char **argv){
+Search *configure_search(int &argc, char **argv){
     args::ArgumentParser parser(MPI3SNP_DESCRIPTION, MPI3SNP_HELP);
     args::Group group(parser, "Required arguments", args::Group::Validators::All);
     args::Positional<std::string> tped(group, "tped-file", "path to TPED file");
@@ -51,7 +51,7 @@ GPUSearchMI *configure_search(int &argc, char **argv){
         IOMpi::Instance().Set_print_level(IOMpi::D);
     }
 
-    GPUSearchMI::Builder builder = GPUSearchMI::Builder(args::get(tped), args::get(tfam), args::get(output));
+    Search::Builder builder = Search::Builder(args::get(tped), args::get(tfam), args::get(output));
     if (gpu_ids) {
         builder.Set_gpu_ids(args::get(gpu_ids));
     }
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     /*get the startup time*/
     stime = MPI_Wtime();
 
-    GPUSearchMI *search = configure_search(argc, argv);
+    Search *search = configure_search(argc, argv);
     if (search == nullptr){
         IOMpi::Instance().Deallocate_MPI_resources();
         MPI_Finalize();
