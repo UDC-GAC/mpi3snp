@@ -72,6 +72,7 @@ int main(int argc, char **argv) {
     /*get the startup time*/
     stime = MPI_Wtime();
 
+    // TODO: 1.Select appropiate CPU/GPU implementation 2.Adequate arguments
     Search *search = configure_search(argc, argv);
     if (search == nullptr){
         IOMpi::Instance().Deallocate_MPI_resources();

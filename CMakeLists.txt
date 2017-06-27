@@ -8,6 +8,8 @@ set(CMAKE_CXX_FLAGS "-g")
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -g")
 add_subdirectory(thirdparty/args)
 
+
+# GPU ------------------
 find_package(MPI REQUIRED)
 find_package(CUDA REQUIRED)
 
