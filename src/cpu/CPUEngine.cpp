@@ -9,6 +9,7 @@
 #include "CPUEngine.h"
 #include "ThreadParams.h"
 #include "EntropySearch.h"
+#include "../ThreadError.h"
 
 CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
     this->num_proc = num_proc;
@@ -45,7 +46,11 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
 
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, threadMI, params[tid]) != 0) {
-            Utils::exit("Thread creating failed\n");
+            for (int i=0; i<tid; i++)
+                pthread_cancel(threadIDs[i]);
+            char message[80];
+            sprintf(message, "error while creating the thread %i in process %i", tid, proc_id);
+            throw ThreadError(message);
         }
     }
 
@@ -66,6 +71,10 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
 }
 
 void* CPUEngine::threadMI(void *arg) {
+    // Enable thread cancellation
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr);
+
     ThreadParams *params = (ThreadParams *) arg;
     uint16_t numOutputs = params->_numOutputs;
     SNPDistributor *distributor = params->_distributor;
