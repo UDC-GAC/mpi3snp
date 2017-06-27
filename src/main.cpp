@@ -31,34 +31,34 @@ Search *configure_search(int &argc, char **argv) {
         parser.ParseCLI(argc, argv);
     }
     catch (args::Help) {
-        std::cout << parser;
+        IOMpi::Instance().Mprintf<IOMpi::N>(parser.Help().c_str());
         return nullptr;
     }
     catch (args::Version) {
-        std::cout << MPI3SNP_NAME << " " << MPI3SNP_VERSION << std::endl;
-        std::cout << MPI3SNP_LICENSE << std::endl;
-        std::cout << std::endl << MPI3SNP_AUTHOR << std::endl;
+        IOMpi::Instance().Mprintf<IOMpi::N>((std::string(MPI3SNP_NAME) + " " + MPI3SNP_VERSION + "\n").c_str());
+        IOMpi::Instance().Mprintf<IOMpi::N>((std::string(MPI3SNP_LICENSE) + "\n").c_str());
+        IOMpi::Instance().Mprintf<IOMpi::N>((std::string("\n") + MPI3SNP_AUTHOR).c_str());
         return nullptr;
     }
     catch (args::ParseError e) {
-        std::cerr << e.what() << std::endl;
-        std::cerr << parser;
+        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, e.what());
+        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, parser.Help().c_str());
         return nullptr;
     }
     catch (args::ValidationError e) {
-        std::cerr << e.what() << std::endl;
-        std::cerr << parser;
+        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, e.what());
+        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, parser.Help().c_str());
         return nullptr;
     }
 
-    if (verb_b) {
-        IOMpi::Instance().Set_print_level(IOMpi::B);
-    }
     if (verb_d) {
         IOMpi::Instance().Set_print_level(IOMpi::D);
+    } else if (verb_b) {
+        IOMpi::Instance().Set_print_level(IOMpi::B);
     }
 
     Search::Builder builder = Search::Builder(args::get(r_tped), args::get(r_tfam), args::get(r_output));
+
 #ifdef MPI3SNP_USE_GPU
     if (gpu_ids) {
         builder.Set_gpu_ids(args::get(gpu_ids));
@@ -68,6 +68,7 @@ Search *configure_search(int &argc, char **argv) {
         builder.Set_cpu_threads(args::get(cpu_threads));
     }
 #endif
+
     if (output_num) {
         builder.Set_num_outputs(args::get(output_num));
     }
