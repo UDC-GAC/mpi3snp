@@ -39,7 +39,7 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
                     Statistics &statistics) {
     std::string snp_load_label("SNPs load time");
     statistics.Begin_timer(snp_load_label);
-    Dataset dataset(tped, tfam);
+    Dataset dataset(tped, tfam, Dataset::Transposed);
     statistics.End_timer(snp_load_label);
 
     Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count(), gpu_ids.size() > 1);
