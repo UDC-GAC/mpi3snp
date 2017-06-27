@@ -6,7 +6,7 @@
 #include <fstream>
 #include <functional>
 
-Dataset::Dataset(std::string tped_path, std::string tfam_path) {
+Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation rep) {
     std::ifstream file;
     std::vector<Individual> individuals;
     std::vector<SNP> snps;
@@ -47,8 +47,15 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path) {
     cases = new std::vector<uint32_t>[3];
     ctrls = new std::vector<uint32_t>[3];
     snp_count = snps.size();
-    Bitvector_representation(individuals, snps
-    );
+
+    switch (rep){
+        case Regular:
+            Regular_representation(individuals, snps);
+            break;
+        case Transposed:
+            Transposed_representation(individuals, snps);
+            break;
+    }
 }
 
 unsigned long find_index(unsigned long start, unsigned long end, std::function<bool(unsigned long)> fun) {
@@ -58,7 +65,13 @@ unsigned long find_index(unsigned long start, unsigned long end, std::function<b
     return start;
 }
 
-void Dataset::Bitvector_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
+void Dataset::Regular_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
+    num_cases = 0;
+    num_ctrls = 0;
+
+}
+
+void Dataset::Transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
     std::vector<unsigned long> scases(32), sctrls(32);
     unsigned long ctrlpos = 0, casepos = 0;
     uint32_t cases_buffer[3], ctrls_buffer[3];

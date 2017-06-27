@@ -20,7 +20,12 @@ public:
         virtual ~ReadError() {};
     };
 
-    Dataset(std::string tped_path, std::string tfam_path);
+    enum Representation {
+        Regular,
+        Transposed
+    };
+
+    Dataset(std::string tped_path, std::string tfam_path, Representation rep);
 
     ~Dataset();
 
@@ -45,8 +50,9 @@ public:
     }
 
 private:
+    void Regular_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
 
-    void Bitvector_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
+    void Transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
 
     std::vector<uint32_t> *cases;
     std::vector<uint32_t> *ctrls;
