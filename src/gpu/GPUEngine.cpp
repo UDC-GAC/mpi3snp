@@ -88,24 +88,24 @@ void *GPUEngine::handle(void *arg) {
         throw CUDAError(cudaGetLastError());
 
     uint32_t *hCa0, *hCa1, *hCa2, *hCt0, *hCt1, *hCt2;
-    if (cudaSuccess != cudaMallocHost(&hCa0, dataset.Get_cases()[0].size() * sizeof(uint32_t)))
+    if (cudaSuccess != cudaMallocHost(&hCa0, dataset.Get_cases()[0][0].size() * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
-    memcpy(hCa0, &dataset.Get_cases()[0][0], dataset.Get_cases()[0].size() * sizeof(uint32_t));
-    if (cudaSuccess != cudaMallocHost(&hCa1, dataset.Get_cases()[1].size() * sizeof(uint32_t)))
+    memcpy(hCa0, &dataset.Get_cases()[0][0][0], dataset.Get_cases()[0][0].size() * sizeof(uint32_t));
+    if (cudaSuccess != cudaMallocHost(&hCa1, dataset.Get_cases()[0][1].size() * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
-    memcpy(hCa1, &dataset.Get_cases()[1][0], dataset.Get_cases()[1].size() * sizeof(uint32_t));
-    if (cudaSuccess != cudaMallocHost(&hCa2, dataset.Get_cases()[2].size() * sizeof(uint32_t)))
+    memcpy(hCa1, &dataset.Get_cases()[0][1][0], dataset.Get_cases()[0][1].size() * sizeof(uint32_t));
+    if (cudaSuccess != cudaMallocHost(&hCa2, dataset.Get_cases()[0][2].size() * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
-    memcpy(hCa2, &dataset.Get_cases()[2][0], dataset.Get_cases()[2].size() * sizeof(uint32_t));
-    if (cudaSuccess != cudaMallocHost(&hCt0, dataset.Get_ctrls()[0].size() * sizeof(uint32_t)))
+    memcpy(hCa2, &dataset.Get_cases()[0][2][0], dataset.Get_cases()[0][2].size() * sizeof(uint32_t));
+    if (cudaSuccess != cudaMallocHost(&hCt0, dataset.Get_ctrls()[0][0].size() * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
-    memcpy(hCt0, &dataset.Get_ctrls()[0][0], dataset.Get_ctrls()[0].size() * sizeof(uint32_t));
-    if (cudaSuccess != cudaMallocHost(&hCt1, dataset.Get_ctrls()[1].size() * sizeof(uint32_t)))
+    memcpy(hCt0, &dataset.Get_ctrls()[0][0][0], dataset.Get_ctrls()[0][0].size() * sizeof(uint32_t));
+    if (cudaSuccess != cudaMallocHost(&hCt1, dataset.Get_ctrls()[0][1].size() * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
-    memcpy(hCt1, &dataset.Get_ctrls()[1][0], dataset.Get_ctrls()[1].size() * sizeof(uint32_t));
-    if (cudaSuccess != cudaMallocHost(&hCt2, dataset.Get_ctrls()[2].size() * sizeof(uint32_t)))
+    memcpy(hCt1, &dataset.Get_ctrls()[0][1][0], dataset.Get_ctrls()[0][1].size() * sizeof(uint32_t));
+    if (cudaSuccess != cudaMallocHost(&hCt2, dataset.Get_ctrls()[0][2].size() * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
-    memcpy(hCt2, &dataset.Get_ctrls()[2][0], dataset.Get_ctrls()[2].size() * sizeof(uint32_t));
+    memcpy(hCt2, &dataset.Get_ctrls()[0][2][0], dataset.Get_ctrls()[0][2].size() * sizeof(uint32_t));
 
     EntropySearch *search = new EntropySearch(isMI, dataset.Get_SNP_count(), dataset.Get_case_count(),
                                               dataset.Get_ctrl_count(), num_outputs,
