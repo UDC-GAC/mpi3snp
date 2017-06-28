@@ -5,6 +5,7 @@
 #include "Dataset.h"
 #include <fstream>
 #include <functional>
+#include <numeric>
 
 Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation rep) {
     std::ifstream file;
@@ -12,7 +13,7 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation re
     std::vector<SNP> snps;
 
     file.open(tfam_path.c_str(), std::ios::in);
-    if (!file.is_open()){
+    if (!file.is_open()) {
         throw ReadError("Error while opening " + tfam_path + ", check file path/permissions");
     }
     try {
@@ -26,7 +27,7 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation re
     file.close();
 
     file.open(tped_path.c_str(), std::ios::in);
-    if (!file.is_open()){
+    if (!file.is_open()) {
         throw ReadError("Error while opening " + tped_path + ", check file path/permissions");
     }
     try {
@@ -44,11 +45,9 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation re
     }
     file.close();
 
-    cases = new std::vector<uint32_t>[3];
-    ctrls = new std::vector<uint32_t>[3];
     snp_count = snps.size();
 
-    switch (rep){
+    switch (rep) {
         case Regular:
             Regular_representation(individuals, snps);
             break;
@@ -66,9 +65,65 @@ unsigned long find_index(unsigned long start, unsigned long end, std::function<b
 }
 
 void Dataset::Regular_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
-    num_cases = 0;
-    num_ctrls = 0;
+    std::vector<uint32_t> *cases_vec = nullptr;
+    std::vector<uint32_t> *ctrls_vec = nullptr;
+    uint32_t cases_buff[3], ctrls_buff[3];
+    unsigned int n_cases_buff, n_ctrls_buff;
+    int i, j;
 
+    for (SNP s : snps) {
+        // Initialize buffers
+        n_ctrls_buff = 0;
+        n_cases_buff = 0;
+        for (j=0; j<3; j++){
+            ctrls_buff[j] = 0;
+            cases_buff[j] = 0;
+        }
+        ctrls_vec = new std::vector<uint32_t>[3];
+        cases_vec = new std::vector<uint32_t>[3];
+        for (i = 0; i < inds.size(); i++) {
+            if (inds[i].ph == 1) {
+                for (j = 0; j < 3; j++) {
+                    ctrls_buff[j] <<= 1;
+                    ctrls_buff[j] += s.genotypes[i] == j;
+                }
+                if (++n_ctrls_buff == 32) {
+                    n_ctrls_buff = 0;
+                    for (j = 0; j < 3; j++) {
+                        ctrls_vec[j].push_back(ctrls_buff[j]);
+                        ctrls_buff[j] = 0;
+                    }
+                }
+            } else {
+                for (j = 0; j < 3; j++) {
+                    cases_buff[j] <<= 1;
+                    cases_buff[j] += s.genotypes[i] == j;
+                }
+                if (++n_cases_buff == 32) {
+                    n_cases_buff = 0;
+                    for (j = 0; j < 3; j++) {
+                        cases_vec[j].push_back(cases_buff[j]);
+                        cases_buff[j] = 0;
+                    }
+                }
+            }
+        }
+        if (n_ctrls_buff > 0) {
+            for (j = 0; j < 3; j++) {
+                ctrls_vec[j].push_back(ctrls_buff[j]);
+            }
+        }
+        if (n_cases_buff > 0) {
+            for (j = 0; j < 3; j++) {
+                cases_vec[j].push_back(cases_buff[j]);
+            }
+        }
+        ctrls.push_back(ctrls_vec);
+        cases.push_back(cases_vec);
+    }
+
+    num_ctrls = (ctrls[0][0].size() - 1) * 32 + n_ctrls_buff;
+    num_cases = (cases[0][0].size() - 1) * 32 + n_cases_buff;
 }
 
 void Dataset::Transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
@@ -76,6 +131,9 @@ void Dataset::Transposed_representation(std::vector<Individual> &inds, std::vect
     unsigned long ctrlpos = 0, casepos = 0;
     uint32_t cases_buffer[3], ctrls_buffer[3];
     int i, j;
+
+    std::vector<uint32_t> *t_cases = new std::vector<uint32_t>[3];
+    std::vector<uint32_t> *t_ctrls = new std::vector<uint32_t>[3];
 
     num_cases = 0;
     num_ctrls = 0;
@@ -114,21 +172,28 @@ void Dataset::Transposed_representation(std::vector<Individual> &inds, std::vect
             // Save buffers when not empty
             if (!scases.empty()) {
                 for (j = 0; j < 3; j++) {
-                    cases[j].push_back(cases_buffer[j]);
+                    t_cases[j].push_back(cases_buffer[j]);
                 }
             }
             if (!sctrls.empty()) {
                 for (j = 0; j < 3; j++) {
-                    ctrls[j].push_back(ctrls_buffer[j]);
+                    t_ctrls[j].push_back(ctrls_buffer[j]);
                 }
             }
         }
         num_cases += scases.size();
         num_ctrls += sctrls.size();
     }
+
+    this->cases.push_back(t_cases);
+    this->ctrls.push_back(t_ctrls);
 }
 
 Dataset::~Dataset() {
-    delete[] cases;
-    delete[] ctrls;
+    for (std::vector<uint32_t> *item : cases) {
+        delete[] item;
+    }
+    for (std::vector<uint32_t> *item : ctrls) {
+        delete[] item;
+    }
 }

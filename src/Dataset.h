@@ -29,23 +29,23 @@ public:
 
     ~Dataset();
 
-    inline std::vector<uint32_t> *&Get_cases(){
+    inline std::vector<std::vector<uint32_t> *> &Get_cases() {
         return cases;
     }
 
-    inline std::vector<uint32_t> *&Get_ctrls(){
+    inline std::vector<std::vector<uint32_t> *> &Get_ctrls() {
         return ctrls;
     }
 
-    inline uint32_t Get_SNP_count(){
+    inline uint32_t Get_SNP_count() {
         return snp_count;
     }
 
-    inline uint16_t Get_ctrl_count(){
+    inline uint16_t Get_ctrl_count() {
         return num_ctrls;
     }
 
-    inline uint16_t Get_case_count(){
+    inline uint16_t Get_case_count() {
         return num_cases;
     }
 
@@ -54,8 +54,8 @@ private:
 
     void Transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
 
-    std::vector<uint32_t> *cases;
-    std::vector<uint32_t> *ctrls;
+    std::vector<std::vector<uint32_t> *> cases;
+    std::vector<std::vector<uint32_t> *> ctrls;
     uint32_t snp_count;
     uint16_t num_cases, num_ctrls;
 };
