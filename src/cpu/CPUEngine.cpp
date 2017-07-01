@@ -10,6 +10,9 @@
 #include "ThreadParams.h"
 #include "EntropySearch.h"
 #include "../ThreadError.h"
+#include "../Dataset.h"
+#include "../Distributor.h"
+#include "../IOMpi.h"
 
 CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
     this->num_proc = num_proc;
@@ -27,26 +30,26 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
     double stime = Utils::getSysTime();
     double etime;
 
-    SNPDistributor distributor(num_proc, proc_id, num_threads, tped_file, tfam_file);
-    distributor.loadSNPSet();
+    Dataset dataset(tped_file, tfam_file, Dataset::Regular);
+
+    Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count(), num_threads > 0);
 
     etime = Utils::getSysTime();
+
     IOMpi::Instance().Cprintf<IOMpi::D>("Loaded %ld SNPs (%ld/%ld cases/controls) in %.2f seconds\n",
-                              distributor.getNumSnp(), distributor.getNumCases(), distributor.getNumCtrls(),
-                              etime - stime);
+                                        dataset.Get_SNP_count(), dataset.Get_case_count(), dataset.Get_ctrl_count(),
+                                        etime - stime);
 
     vector<pthread_t> threadIDs(num_threads, 0);
 
     // Computation of the single-SNP entropy
     std::vector<ThreadParams *> params(num_threads);
     for (int tid = 0; tid < num_threads; tid++) {
-        params[tid] = new ThreadParams(tid);
-        // All threads use the same distributor so it gives them the correct pair of SNPs
-        params[tid]->init(&distributor, num_outputs);
+        params[tid] = new ThreadParams(tid, distributor, dataset, num_outputs);
 
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, threadMI, params[tid]) != 0) {
-            for (int i=0; i<tid; i++)
+            for (int i = 0; i < tid; i++)
                 pthread_cancel(threadIDs[i]);
             char message[80];
             sprintf(message, "error while creating the thread %i in process %i", tid, proc_id);
@@ -59,8 +62,7 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
     // Wait for the completion of all threads
     for (int tid = 0; tid < num_threads; tid++) {
         pthread_join(threadIDs[tid], NULL);
-        memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->_mutualInfo,
-               num_outputs * sizeof(MutualInfo));
+        memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->mutualInfo, num_outputs * sizeof(MutualInfo));
         delete params[tid];
     }
 
@@ -70,22 +72,21 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
     memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (num_threads - 1), sizeof(MutualInfo) * num_outputs);
 }
 
-void* CPUEngine::threadMI(void *arg) {
+void *CPUEngine::threadMI(void *arg) {
     // Enable thread cancellation
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr);
 
     ThreadParams *params = (ThreadParams *) arg;
-    uint16_t numOutputs = params->_numOutputs;
-    SNPDistributor *distributor = params->_distributor;
 
-    EntropySearch search(distributor->getNumSnp(), distributor->getNumCases(), distributor->getNumCtrls());
-    const vector<SNP2 *> &snpSet = distributor->getSnpSet();
-    // In this case the ids are necessary to access to the single-SNP entropy
-    uint32_t *auxIds = new uint32_t[2 * NUM_PAIRS_BLOCK];
+    EntropySearch search(params->dataset.Get_SNP_count(), params->dataset.Get_case_count(), params->dataset.Get_cases(),
+                         params->dataset.Get_ctrl_count(), params->dataset.Get_ctrls());
+
+    std::vector<std::pair<uint32_t, uint32_t>> pairs;
+    pairs.reserve(Distributor::DEFAULT_PAIRS_BLOCK);
 
     // Variables to work with the outputs
-    MutualInfo *mutualInfo = new MutualInfo[numOutputs];
+    MutualInfo *mutualInfo = new MutualInfo[params->numOutputs];
     // The minimum value in the array
     float minMI = FLT_MAX;
     // The position of the minimum value
@@ -93,28 +94,18 @@ void* CPUEngine::threadMI(void *arg) {
     // Number of entries of the array full
     uint16_t numEntriesWithMI = 0;
 
-    bool moreAnal = true;
     uint64_t myTotalAnal = 0;
-    uint64_t numPairsBlock = 0;
     double stime = Utils::getSysTime();
 
-    while (moreAnal) {
-        // Take some SNPs
-        numPairsBlock = distributor->getPairsSNPs(auxIds);
-
-        if (numPairsBlock) {
-            myTotalAnal += search.mutualInfo(snpSet, numPairsBlock, auxIds, mutualInfo, numOutputs, minMI,
-                                              minMIPos, numEntriesWithMI);
-        } else {
-            moreAnal = false;
-        }
+    while (params->distributor.Get_pairs(pairs, myTotalAnal) > 0) {
+        search.mutualInfo(pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
+        pairs.clear();
     }
 
     params->_numAnalyzed = myTotalAnal;
     params->_runtime = Utils::getSysTime() - stime;
-    memcpy(params->_mutualInfo, mutualInfo, numOutputs * sizeof(MutualInfo));
+    memcpy(params->mutualInfo, mutualInfo, params->numOutputs * sizeof(MutualInfo));
 
-    delete[] auxIds;
     delete[] mutualInfo;
     return NULL;
 }

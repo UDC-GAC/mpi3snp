@@ -9,10 +9,8 @@
 #define ENGINE_H_
 
 #include "Macros.h"
-#include "SNP2.h"
 #include "../MutualInfo.h"
 #include "ContTable.h"
-#include "SNPDistributor.h"
 #include "../Statistics.h"
 
 class CPUEngine {
