@@ -5,9 +5,9 @@
 #ifndef MPI3SNP_DISTRIBUTOR_H
 #define MPI3SNP_DISTRIBUTOR_H
 
-#include <cuda_runtime.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <vector>
 
 class Distributor {
 public:
@@ -16,14 +16,14 @@ public:
 
     ~Distributor();
 
-    unsigned long Get_pairs(uint2 *values, uint64_t &totalAnal);
+    unsigned long Get_pairs(std::vector<std::pair<uint32_t,uint32_t>> &values, uint64_t &totalAnal);
 
     static const unsigned long DEFAULT_PAIRS_BLOCK = 25000;
 
 private:
-    unsigned long Get_pairs_lock(uint2 *values, uint64_t &totalAnal);
+    unsigned long Get_pairs_lock(std::vector<std::pair<uint32_t,uint32_t>> &values, uint64_t &totalAnal);
 
-    unsigned long Get_pairs_nolock(uint2 *values, uint64_t &totalAnal);
+    unsigned long Get_pairs_nolock(std::vector<std::pair<uint32_t,uint32_t>> &values, uint64_t &totalAnal);
 
     bool items_left;
     unsigned long item_num;
@@ -35,7 +35,6 @@ private:
     unsigned long dist_size, dist_it;
     uint32_t *dist;
     uint32_t it1, it2;
-
 };
 
 

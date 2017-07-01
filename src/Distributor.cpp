@@ -31,7 +31,7 @@ Distributor::~Distributor() {
     pthread_mutex_destroy(&lock);
 }
 
-unsigned long Distributor::Get_pairs(uint2 *values, uint64_t &totalAnal) {
+unsigned long Distributor::Get_pairs(std::vector<std::pair<uint32_t,uint32_t>> &values, uint64_t &totalAnal) {
     if (shared) {
         return Get_pairs_lock(values, totalAnal);
     } else {
@@ -39,15 +39,14 @@ unsigned long Distributor::Get_pairs(uint2 *values, uint64_t &totalAnal) {
     }
 }
 
-unsigned long Distributor::Get_pairs_nolock(uint2 *values, uint64_t &totalAnal) {
+unsigned long Distributor::Get_pairs_nolock(std::vector<std::pair<uint32_t,uint32_t>> &values, uint64_t &totalAnal) {
     unsigned long iter_block = 0;
 
     if (items_left) {
         while (dist_it < dist_size) {
             while (it2 < item_num - 1 && iter_block < block_size) {
                 totalAnal += item_num - it2 - 1;
-                values[iter_block].x = it1;
-                values[iter_block].y = it2++;
+                values.push_back(std::make_pair(it1, it2++));
                 iter_block++;
             }
 
@@ -64,7 +63,7 @@ unsigned long Distributor::Get_pairs_nolock(uint2 *values, uint64_t &totalAnal) 
     return iter_block;
 }
 
-unsigned long Distributor::Get_pairs_lock(uint2 *values, uint64_t &totalAnal) {
+unsigned long Distributor::Get_pairs_lock(std::vector<std::pair<uint32_t,uint32_t>> &values, uint64_t &totalAnal) {
     unsigned long iter_block = 0;
 
     pthread_mutex_lock(&lock);
