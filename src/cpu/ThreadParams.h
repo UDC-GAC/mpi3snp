@@ -8,7 +8,6 @@
 #ifndef THREADPARAMS_H_
 #define THREADPARAMS_H_
 
-#include "Macros.h"
 #include "../MutualInfo.h"
 #include "../Distributor.h"
 #include "../Dataset.h"
