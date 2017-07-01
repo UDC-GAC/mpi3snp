@@ -9,6 +9,7 @@
 #define CONTTABLE_H_
 
 #include "Macros.h"
+#include "Utils.h"
 
 /*
  * Structure for the auxiliar 2-SNP contingency tables
