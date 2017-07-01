@@ -4,41 +4,44 @@
 
 #include "EntropySearch.h"
 
-EntropySearch::EntropySearch(uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls) {
-    _numSNPs = numSNPs;
-    _numCases = numCases;
-    _numCtrls = numCtrls;
-    _numEntriesCases = numCases / 32 + ((numCases % 32) > 0);
-    _numEntriesCtrls = numCtrls / 32 + ((numCtrls % 32) > 0);
-    _invInds = 1.0 / (numCases + numCtrls);
+EntropySearch::EntropySearch(uint32_t numSNPs, uint16_t numCases, const std::vector<std::vector<uint32_t> *> &cases,
+                             uint16_t numCtrls, const std::vector<std::vector<uint32_t> *> &ctrls) :
+        num_snps(numSNPs),
+        cases(cases),
+        num_cases(numCases),
+        ctrls(ctrls),
+        num_ctrls(numCtrls),
+        _numEntriesCases(numCases / 32 + ((numCases % 32) > 0)),
+        _numEntriesCtrls(numCtrls / 32 + ((numCtrls % 32) > 0)) {
+    invInds = 1.0 / (numCases + numCtrls);
 
-    float p = numCases * _invInds;
-    _entY = (-1.0) * p * log2(p);
+    float p = numCases * invInds;
+    entY = (-1.0) * p * log2(p);
 
-    p = numCtrls * _invInds;
-    _entY -= p * log2(p);
+    p = numCtrls * invInds;
+    entY -= p * log2(p);
 }
 
-uint64_t EntropySearch::mutualInfo(vector<SNP2 *> snpSet, uint64_t numPairs, uint32_t *ids, MutualInfo *mutualInfo,
+uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, MutualInfo *mutualInfo,
                                    uint16_t numOutputs, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI) {
 
     uint32_t id1, id2, id3;
     float auxMIValue;
     uint64_t numAnal = 0;
     MutualInfo *auxMI;
-    DoubleContTable *doubleTable = new DoubleContTable(_numCases, _numCtrls);
+    DoubleContTable *doubleTable = new DoubleContTable(num_cases, num_ctrls);
     TripleContTable tripleTable;
 
 #ifdef BENCHMARKING_PARTS
     double partTime;
 #endif
+    for (auto p : pairs) {
+        //for (uint64_t iterPairs = 0; iterPairs < numPairs; iterPairs++) {
 
-    for (uint64_t iterPairs = 0; iterPairs < numPairs; iterPairs++) {
+        id1 = p.first;
+        id2 = p.second;
 
-        id1 = ids[2 * iterPairs];
-        id2 = ids[2 * iterPairs + 1];
-
-        _fillDoubleContTable(snpSet[id1], snpSet[id2], doubleTable);
+        _fillDoubleContTable(ctrls[id1], cases[id1], ctrls[id2], cases[id2], doubleTable);
 
 #ifdef DOUBLE_SNP_ANALYSIS
         auxMIValue = _calcDoubleMI(doubleTable);
@@ -80,9 +83,9 @@ uint64_t EntropySearch::mutualInfo(vector<SNP2 *> snpSet, uint64_t numPairs, uin
 #endif
 
 #ifdef TRIPLE_SNP_ANALYSIS
-        for (id3 = id2 + 1; id3 < _numSNPs; id3++) {
+        for (id3 = id2 + 1; id3 < num_snps; id3++) {
             // Generate the contingency table of the 3-SNP
-            _fillTripleContTable(doubleTable, &tripleTable, snpSet[id3]);
+            _fillTripleContTable(doubleTable, &tripleTable, ctrls[id3], cases[id3]);
 
             // Calculate the MI with the contingency table
             auxMIValue = _calcTripleMI(&tripleTable);
@@ -131,32 +134,31 @@ uint64_t EntropySearch::mutualInfo(vector<SNP2 *> snpSet, uint64_t numPairs, uin
     return numAnal;
 }
 
-void EntropySearch::_fillDoubleContTable(SNP2 *snp1, SNP2 *snp2, DoubleContTable *table) {
-
-    uint16_t sum00 = 0, sum01 = 0, sum02 = 0, sum10 = 0, sum11 = 0, sum12 = 0, sum20 = 0, sum21 = 0, sum22 = 0;
-
+void EntropySearch::_fillDoubleContTable(std::vector<uint32_t> *s1_ctrls, std::vector<uint32_t> *s1_cases,
+                                         std::vector<uint32_t> *s2_ctrls, std::vector<uint32_t> *s2_cases,
+                                         DoubleContTable *table) {
     for (int i = 0; i < _numEntriesCases; i++) {
-        table->_cases00[i] = snp1->_case0Values[i] & snp2->_case0Values[i];
-        table->_cases01[i] = snp1->_case0Values[i] & snp2->_case1Values[i];
-        table->_cases02[i] = snp1->_case0Values[i] & snp2->_case2Values[i];
-        table->_cases10[i] = snp1->_case1Values[i] & snp2->_case0Values[i];
-        table->_cases11[i] = snp1->_case1Values[i] & snp2->_case1Values[i];
-        table->_cases12[i] = snp1->_case1Values[i] & snp2->_case2Values[i];
-        table->_cases20[i] = snp1->_case2Values[i] & snp2->_case0Values[i];
-        table->_cases21[i] = snp1->_case2Values[i] & snp2->_case1Values[i];
-        table->_cases22[i] = snp1->_case2Values[i] & snp2->_case2Values[i];
+        table->_cases00[i] = s1_cases[0][i] & s2_cases[0][i];
+        table->_cases01[i] = s1_cases[0][i] & s2_cases[1][i];
+        table->_cases02[i] = s1_cases[0][i] & s2_cases[2][i];
+        table->_cases10[i] = s1_cases[1][i] & s2_cases[0][i];
+        table->_cases11[i] = s1_cases[1][i] & s2_cases[1][i];
+        table->_cases12[i] = s1_cases[1][i] & s2_cases[2][i];
+        table->_cases20[i] = s1_cases[2][i] & s2_cases[0][i];
+        table->_cases21[i] = s1_cases[2][i] & s2_cases[1][i];
+        table->_cases22[i] = s1_cases[2][i] & s2_cases[2][i];
     }
 
     for (int i = 0; i < _numEntriesCtrls; i++) {
-        table->_ctrls00[i] = snp1->_ctrl0Values[i] & snp2->_ctrl0Values[i];
-        table->_ctrls01[i] = snp1->_ctrl0Values[i] & snp2->_ctrl1Values[i];
-        table->_ctrls02[i] = snp1->_ctrl0Values[i] & snp2->_ctrl2Values[i];
-        table->_ctrls10[i] = snp1->_ctrl1Values[i] & snp2->_ctrl0Values[i];
-        table->_ctrls11[i] = snp1->_ctrl1Values[i] & snp2->_ctrl1Values[i];
-        table->_ctrls12[i] = snp1->_ctrl1Values[i] & snp2->_ctrl2Values[i];
-        table->_ctrls20[i] = snp1->_ctrl2Values[i] & snp2->_ctrl0Values[i];
-        table->_ctrls21[i] = snp1->_ctrl2Values[i] & snp2->_ctrl1Values[i];
-        table->_ctrls22[i] = snp1->_ctrl2Values[i] & snp2->_ctrl2Values[i];
+        table->_ctrls00[i] = s1_ctrls[0][i] & s2_ctrls[0][i];
+        table->_ctrls01[i] = s1_ctrls[0][i] & s2_ctrls[1][i];
+        table->_ctrls02[i] = s1_ctrls[0][i] & s2_ctrls[2][i];
+        table->_ctrls10[i] = s1_ctrls[1][i] & s2_ctrls[0][i];
+        table->_ctrls11[i] = s1_ctrls[1][i] & s2_ctrls[1][i];
+        table->_ctrls12[i] = s1_ctrls[1][i] & s2_ctrls[2][i];
+        table->_ctrls20[i] = s1_ctrls[2][i] & s2_ctrls[0][i];
+        table->_ctrls21[i] = s1_ctrls[2][i] & s2_ctrls[1][i];
+        table->_ctrls22[i] = s1_ctrls[2][i] & s2_ctrls[2][i];
     }
 }
 
@@ -198,12 +200,12 @@ float EntropySearch::_calcDoubleMI(DoubleContTable *table) {
     float pCase, pCtrl;
 
     for (int i = 0; i < 9; i++) {
-        pCase = contCases[i] * _invInds;
+        pCase = contCases[i] * invInds;
         if (pCase != 0.0) {
             entAll -= pCase * log2(pCase);
         }
 
-        pCtrl = contCtrls[i] * _invInds;
+        pCtrl = contCtrls[i] * invInds;
         if (pCtrl != 0.0) {
             entAll -= pCtrl * log2(pCtrl);
         }
@@ -214,10 +216,11 @@ float EntropySearch::_calcDoubleMI(DoubleContTable *table) {
         }
     }
 
-    return entX + _entY - entAll;
+    return entX + entY - entAll;
 }
 
-void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleContTable *tripleTable, SNP2 *snp3) {
+void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleContTable *tripleTable,
+                                         std::vector<uint32_t> *s3_ctrls, std::vector<uint32_t> *s3_cases) {
 
     uint32_t aux;
     uint32_t auxSNP3Value;
@@ -225,7 +228,7 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
     tripleTable->clearValues();
 
     for (int i = 0; i < _numEntriesCases; i++) {
-        auxSNP3Value = snp3->_case0Values[i];
+        auxSNP3Value = s3_cases[0][i];
 
         aux = doubleTable->_cases00[i] & auxSNP3Value;
         tripleTable->_cases[0] += Utils::popcount(aux);
@@ -255,7 +258,7 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
         tripleTable->_cases[8] += Utils::popcount(aux);
 
 
-        auxSNP3Value = snp3->_case1Values[i];
+        auxSNP3Value = s3_cases[1][i];
 
         aux = doubleTable->_cases00[i] & auxSNP3Value;
         tripleTable->_cases[9] += Utils::popcount(aux);
@@ -285,7 +288,7 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
         tripleTable->_cases[17] += Utils::popcount(aux);
 
 
-        auxSNP3Value = snp3->_case2Values[i];
+        auxSNP3Value = s3_cases[2][i];
 
         aux = doubleTable->_cases00[i] & auxSNP3Value;
         tripleTable->_cases[18] += Utils::popcount(aux);
@@ -316,7 +319,7 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
     }
 
     for (int i = 0; i < _numEntriesCtrls; i++) {
-        auxSNP3Value = snp3->_ctrl0Values[i];
+        auxSNP3Value = s3_ctrls[0][i];
 
         aux = doubleTable->_ctrls00[i] & auxSNP3Value;
         tripleTable->_ctrls[0] += Utils::popcount(aux);
@@ -346,7 +349,7 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
         tripleTable->_ctrls[8] += Utils::popcount(aux);
 
 
-        auxSNP3Value = snp3->_ctrl1Values[i];
+        auxSNP3Value = s3_ctrls[1][i];
 
         aux = doubleTable->_ctrls00[i] & auxSNP3Value;
         tripleTable->_ctrls[9] += Utils::popcount(aux);
@@ -376,7 +379,7 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
         tripleTable->_ctrls[17] += Utils::popcount(aux);
 
 
-        auxSNP3Value = snp3->_ctrl2Values[i];
+        auxSNP3Value = s3_ctrls[2][i];
 
         aux = doubleTable->_ctrls00[i] & auxSNP3Value;
         tripleTable->_ctrls[18] += Utils::popcount(aux);
@@ -415,12 +418,12 @@ float EntropySearch::_calcTripleMI(TripleContTable *table) {
 
     for (int i = 0; i < 27; i++) {
 
-        pCase = table->_cases[i] * _invInds;
+        pCase = table->_cases[i] * invInds;
         if (pCase != 0.0) {
             entAll -= pCase * log2(pCase);
         }
 
-        pCtrl = table->_ctrls[i] * _invInds;
+        pCtrl = table->_ctrls[i] * invInds;
         if (pCtrl != 0.0) {
             entAll -= pCtrl * log2(pCtrl);
         }
@@ -431,5 +434,5 @@ float EntropySearch::_calcTripleMI(TripleContTable *table) {
         }
     }
 
-    return entX + _entY - entAll;
+    return entX + entY - entAll;
 }
