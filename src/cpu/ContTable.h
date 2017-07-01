@@ -8,8 +8,7 @@
 #ifndef CONTTABLE_H_
 #define CONTTABLE_H_
 
-#include "Macros.h"
-#include "Utils.h"
+#include <cstring>
 
 /*
  * Structure for the auxiliar 2-SNP contingency tables
@@ -23,110 +22,92 @@ struct DoubleContTable
 
 		_cases00 = new uint32_t[numEntryCases];
 		if (_cases00 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases01 = new uint32_t[numEntryCases];
 		if (_cases01 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases02 = new uint32_t[numEntryCases];
 		if (_cases02 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases10 = new uint32_t[numEntryCases];
 		if (_cases10 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases11 = new uint32_t[numEntryCases];
 		if (_cases11 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases12 = new uint32_t[numEntryCases];
 		if (_cases12 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases20 = new uint32_t[numEntryCases];
 		if (_cases20 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases21 = new uint32_t[numEntryCases];
 		if (_cases21 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_cases22 = new uint32_t[numEntryCases];
 		if (_cases22 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls00 = new uint32_t[numEntryCtrls];
 		if (_ctrls00 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls01 = new uint32_t[numEntryCtrls];
 		if (_ctrls01 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls02 = new uint32_t[numEntryCtrls];
 		if (_ctrls02 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls10 = new uint32_t[numEntryCtrls];
 		if (_ctrls10 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls11 = new uint32_t[numEntryCtrls];
 		if (_ctrls11 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls12 = new uint32_t[numEntryCtrls];
 		if (_ctrls12 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls20 = new uint32_t[numEntryCtrls];
 		if (_ctrls20 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls21 = new uint32_t[numEntryCtrls];
 		if (_ctrls21 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 
 		_ctrls22 = new uint32_t[numEntryCtrls];
 		if (_ctrls22 == NULL) {
-			Utils::exit("Memory allocation failed in file %s in line %d\n",
-					__FUNCTION__, __LINE__);
+			exit(1);
 		}
 	}
 
@@ -167,8 +148,8 @@ struct TripleContTable
 	}
 
 	void setValues(uint16_t* cases, uint16_t* ctrls){
-		memcpy(_cases, cases, 27*sizeof(uint16_t));
-		memcpy(_ctrls, ctrls, 27*sizeof(uint16_t));
+		std::memcpy(_cases, cases, 27*sizeof(uint16_t));
+		std::memcpy(_ctrls, ctrls, 27*sizeof(uint16_t));
 	}
 
 	uint16_t _cases[27];
