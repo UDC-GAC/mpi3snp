@@ -9,36 +9,32 @@
 #define THREADPARAMS_H_
 
 #include "Macros.h"
-#include "SNPDistributor.h"
 #include "../MutualInfo.h"
+#include "../Distributor.h"
+#include "../Dataset.h"
 
 struct ThreadParams {
-    ThreadParams(int tid) {
-        _tid = tid;
-        _distributor = nullptr;
-        _numOutputs = 0;
+    ThreadParams(int tid, Distributor &distributor, Dataset &dataset, uint16_t numOutputs) :
+            tid(tid),
+            distributor(distributor),
+            dataset(dataset),
+            numOutputs(numOutputs),
+            mutualInfo(new MutualInfo[numOutputs]) {
         _numAnalyzed = 0;
-        _mutualInfo = NULL;
         _runtime = 0;
     }
 
     ~ThreadParams() {
-        delete _mutualInfo;
+        delete[] mutualInfo;
     }
 
-    inline void init(SNPDistributor *distributor, uint16_t numOutputs) {
-        _distributor = distributor;
-        _numOutputs = numOutputs;
-        _mutualInfo = new MutualInfo[numOutputs];
-    }
-
-    int _tid;
-    SNPDistributor *_distributor;
-
+    const int tid;
+    Distributor &distributor;
+    Dataset &dataset;
+    const uint16_t numOutputs;
+    MutualInfo *mutualInfo;
     // Values for the return information
-    uint16_t _numOutputs;
     uint64_t _numAnalyzed;
-    MutualInfo *_mutualInfo;
     double _runtime;
 };
 
