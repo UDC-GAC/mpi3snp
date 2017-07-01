@@ -5,7 +5,6 @@
  *      Author: gonzales
  */
 
-#include <cfloat>
 #include "CPUEngine.h"
 #include "ThreadParams.h"
 #include "EntropySearch.h"
@@ -13,6 +12,8 @@
 #include "../Dataset.h"
 #include "../Distributor.h"
 #include "../IOMpi.h"
+#include <cfloat>
+#include <vector>
 
 CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
     this->num_proc = num_proc;
@@ -27,20 +28,20 @@ CPUEngine::~CPUEngine() {
 
 void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vector<MutualInfo> &mutual_info,
                         uint16_t num_outputs, Statistics &statistics) {
-    double stime = Utils::getSysTime();
+    double stime = MPI_Wtime();
     double etime;
 
     Dataset dataset(tped_file, tfam_file, Dataset::Regular);
 
     Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count(), num_threads > 0);
 
-    etime = Utils::getSysTime();
+    etime = MPI_Wtime();
 
     IOMpi::Instance().Cprintf<IOMpi::D>("Loaded %ld SNPs (%ld/%ld cases/controls) in %.2f seconds\n",
                                         dataset.Get_SNP_count(), dataset.Get_case_count(), dataset.Get_ctrl_count(),
                                         etime - stime);
 
-    vector<pthread_t> threadIDs(num_threads, 0);
+    std::vector<pthread_t> threadIDs(num_threads, 0);
 
     // Computation of the single-SNP entropy
     std::vector<ThreadParams *> params(num_threads);
@@ -95,7 +96,7 @@ void *CPUEngine::threadMI(void *arg) {
     uint16_t numEntriesWithMI = 0;
 
     uint64_t myTotalAnal = 0;
-    double stime = Utils::getSysTime();
+    double stime = MPI_Wtime();
 
     while (params->distributor.Get_pairs(pairs, myTotalAnal) > 0) {
         search.mutualInfo(pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
@@ -103,7 +104,7 @@ void *CPUEngine::threadMI(void *arg) {
     }
 
     params->_numAnalyzed = myTotalAnal;
-    params->_runtime = Utils::getSysTime() - stime;
+    params->_runtime = MPI_Wtime() - stime;
     memcpy(params->mutualInfo, mutualInfo, params->numOutputs * sizeof(MutualInfo));
 
     delete[] mutualInfo;
