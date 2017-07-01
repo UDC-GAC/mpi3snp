@@ -115,6 +115,9 @@ void *GPUEngine::handle(void *arg) {
     if (cudaSuccess != cudaMallocHost(&auxIds, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(uint2)))
         throw CUDAError(cudaGetLastError());
 
+    std::vector<std::pair<uint32_t, uint32_t >> temp;
+    temp.reserve(Distributor::DEFAULT_PAIRS_BLOCK);
+
     // Variables to work with the outputs
     MutualInfo *mutualInfo = params->mutual_info;
     // The minimum value in the array
@@ -124,7 +127,6 @@ void *GPUEngine::handle(void *arg) {
     // Number of entries of the array full
     uint16_t numEntriesWithMI = 0;
 
-    bool moreAnal = true;
     uint64_t myTotalAnal = 0;
     uint64_t numPairsBlock = 0;
 
@@ -135,15 +137,13 @@ void *GPUEngine::handle(void *arg) {
 
     statistics.Begin_timer(timer_label);
 
-    while (moreAnal) {
-        // Take some SNPs
-        numPairsBlock = distributor.Get_pairs(auxIds, myTotalAnal);
-
-        if (numPairsBlock) {
-            search->mutualInfo(numPairsBlock, auxIds, mutualInfo, minMI, minMIPos, numEntriesWithMI);
-        } else {
-            moreAnal = false;
+    while ((numPairsBlock = distributor.Get_pairs(temp, myTotalAnal)) > 0) {
+        for (int i=0; i<temp.size(); i++){
+            auxIds[i].x = temp[i].first;
+            auxIds[i].y = temp[i].second;
         }
+        temp.clear();
+        search->mutualInfo(numPairsBlock, auxIds, mutualInfo, minMI, minMIPos, numEntriesWithMI);
     }
 
     cudaDeviceSynchronize();
