@@ -4,6 +4,9 @@
 
 #include "EntropySearch.h"
 
+#include <cmath>
+#include <algorithm>
+
 EntropySearch::EntropySearch(uint32_t numSNPs, uint16_t numCases, const std::vector<std::vector<uint32_t> *> &cases,
                              uint16_t numCtrls, const std::vector<std::vector<uint32_t> *> &ctrls) :
         num_snps(numSNPs),
@@ -32,9 +35,6 @@ uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_
     DoubleContTable *doubleTable = new DoubleContTable(num_cases, num_ctrls);
     TripleContTable tripleTable;
 
-#ifdef BENCHMARKING_PARTS
-    double partTime;
-#endif
     for (auto p : pairs) {
         //for (uint64_t iterPairs = 0; iterPairs < numPairs; iterPairs++) {
 
@@ -43,7 +43,6 @@ uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_
 
         _fillDoubleContTable(ctrls[id1], cases[id1], ctrls[id2], cases[id2], doubleTable);
 
-#ifdef DOUBLE_SNP_ANALYSIS
         auxMIValue = _calcDoubleMI(doubleTable);
 
         // There are empty values in the array
@@ -69,7 +68,7 @@ uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_
             auxMI->_mutualInfoValue = auxMIValue;
 
             // Find the new minimum
-            auxMI = min_element(mutualInfo, mutualInfo + numOutputs);
+            auxMI = std::min_element(mutualInfo, mutualInfo + numOutputs);
             minMI = auxMI->_mutualInfoValue;
             uint16_t i = 0;
             while (1) {
@@ -80,9 +79,7 @@ uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_
             }
             minMIPos = i;
         }
-#endif
 
-#ifdef TRIPLE_SNP_ANALYSIS
         for (id3 = id2 + 1; id3 < num_snps; id3++) {
             // Generate the contingency table of the 3-SNP
             _fillTripleContTable(doubleTable, &tripleTable, ctrls[id3], cases[id3]);
@@ -113,7 +110,7 @@ uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_
                 auxMI->_mutualInfoValue = auxMIValue;
 
                 // Find the new minimum
-                auxMI = min_element(mutualInfo, mutualInfo + numOutputs);
+                auxMI = std::min_element(mutualInfo, mutualInfo + numOutputs);
                 minMI = auxMI->_mutualInfoValue;
                 uint16_t i = 0;
                 while (1) {
@@ -127,11 +124,16 @@ uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_
 
             numAnal++;
         }
-#endif
     }
 
     delete doubleTable;
     return numAnal;
+}
+
+uint32_t popcount(uint32_t v) {
+    uint32_t u;
+    u = v - ((v >> 1) & 033333333333) - ((v >> 2) & 011111111111);
+    return ((u + (u >> 3)) & 030707070707) % 63;
 }
 
 void EntropySearch::_fillDoubleContTable(std::vector<uint32_t> *s1_ctrls, std::vector<uint32_t> *s1_cases,
@@ -173,26 +175,26 @@ float EntropySearch::_calcDoubleMI(DoubleContTable *table) {
     }
 
     for (int i = 0; i < _numEntriesCases; i++) {
-        contCases[0] += Utils::popcount(table->_cases00[i]);
-        contCases[1] += Utils::popcount(table->_cases01[i]);
-        contCases[2] += Utils::popcount(table->_cases02[i]);
-        contCases[3] += Utils::popcount(table->_cases10[i]);
-        contCases[4] += Utils::popcount(table->_cases11[i]);
-        contCases[5] += Utils::popcount(table->_cases12[i]);
-        contCases[6] += Utils::popcount(table->_cases20[i]);
-        contCases[7] += Utils::popcount(table->_cases21[i]);
-        contCases[8] += Utils::popcount(table->_cases22[i]);
+        contCases[0] += popcount(table->_cases00[i]);
+        contCases[1] += popcount(table->_cases01[i]);
+        contCases[2] += popcount(table->_cases02[i]);
+        contCases[3] += popcount(table->_cases10[i]);
+        contCases[4] += popcount(table->_cases11[i]);
+        contCases[5] += popcount(table->_cases12[i]);
+        contCases[6] += popcount(table->_cases20[i]);
+        contCases[7] += popcount(table->_cases21[i]);
+        contCases[8] += popcount(table->_cases22[i]);
     }
     for (int i = 0; i < _numEntriesCtrls; i++) {
-        contCtrls[0] += Utils::popcount(table->_ctrls00[i]);
-        contCtrls[1] += Utils::popcount(table->_ctrls01[i]);
-        contCtrls[2] += Utils::popcount(table->_ctrls02[i]);
-        contCtrls[3] += Utils::popcount(table->_ctrls10[i]);
-        contCtrls[4] += Utils::popcount(table->_ctrls11[i]);
-        contCtrls[5] += Utils::popcount(table->_ctrls12[i]);
-        contCtrls[6] += Utils::popcount(table->_ctrls20[i]);
-        contCtrls[7] += Utils::popcount(table->_ctrls21[i]);
-        contCtrls[8] += Utils::popcount(table->_ctrls22[i]);
+        contCtrls[0] += popcount(table->_ctrls00[i]);
+        contCtrls[1] += popcount(table->_ctrls01[i]);
+        contCtrls[2] += popcount(table->_ctrls02[i]);
+        contCtrls[3] += popcount(table->_ctrls10[i]);
+        contCtrls[4] += popcount(table->_ctrls11[i]);
+        contCtrls[5] += popcount(table->_ctrls12[i]);
+        contCtrls[6] += popcount(table->_ctrls20[i]);
+        contCtrls[7] += popcount(table->_ctrls21[i]);
+        contCtrls[8] += popcount(table->_ctrls22[i]);
     }
 
     float entX = 0.0;
@@ -231,182 +233,182 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
         auxSNP3Value = s3_cases[0][i];
 
         aux = doubleTable->_cases00[i] & auxSNP3Value;
-        tripleTable->_cases[0] += Utils::popcount(aux);
+        tripleTable->_cases[0] += popcount(aux);
 
         aux = doubleTable->_cases01[i] & auxSNP3Value;
-        tripleTable->_cases[1] += Utils::popcount(aux);
+        tripleTable->_cases[1] += popcount(aux);
 
         aux = doubleTable->_cases02[i] & auxSNP3Value;
-        tripleTable->_cases[2] += Utils::popcount(aux);
+        tripleTable->_cases[2] += popcount(aux);
 
         aux = doubleTable->_cases10[i] & auxSNP3Value;
-        tripleTable->_cases[3] += Utils::popcount(aux);
+        tripleTable->_cases[3] += popcount(aux);
 
         aux = doubleTable->_cases11[i] & auxSNP3Value;
-        tripleTable->_cases[4] += Utils::popcount(aux);
+        tripleTable->_cases[4] += popcount(aux);
 
         aux = doubleTable->_cases12[i] & auxSNP3Value;
-        tripleTable->_cases[5] += Utils::popcount(aux);
+        tripleTable->_cases[5] += popcount(aux);
 
         aux = doubleTable->_cases20[i] & auxSNP3Value;
-        tripleTable->_cases[6] += Utils::popcount(aux);
+        tripleTable->_cases[6] += popcount(aux);
 
         aux = doubleTable->_cases21[i] & auxSNP3Value;
-        tripleTable->_cases[7] += Utils::popcount(aux);
+        tripleTable->_cases[7] += popcount(aux);
 
         aux = doubleTable->_cases22[i] & auxSNP3Value;
-        tripleTable->_cases[8] += Utils::popcount(aux);
+        tripleTable->_cases[8] += popcount(aux);
 
 
         auxSNP3Value = s3_cases[1][i];
 
         aux = doubleTable->_cases00[i] & auxSNP3Value;
-        tripleTable->_cases[9] += Utils::popcount(aux);
+        tripleTable->_cases[9] += popcount(aux);
 
         aux = doubleTable->_cases01[i] & auxSNP3Value;
-        tripleTable->_cases[10] += Utils::popcount(aux);
+        tripleTable->_cases[10] += popcount(aux);
 
         aux = doubleTable->_cases02[i] & auxSNP3Value;
-        tripleTable->_cases[11] += Utils::popcount(aux);
+        tripleTable->_cases[11] += popcount(aux);
 
         aux = doubleTable->_cases10[i] & auxSNP3Value;
-        tripleTable->_cases[12] += Utils::popcount(aux);
+        tripleTable->_cases[12] += popcount(aux);
 
         aux = doubleTable->_cases11[i] & auxSNP3Value;
-        tripleTable->_cases[13] += Utils::popcount(aux);
+        tripleTable->_cases[13] += popcount(aux);
 
         aux = doubleTable->_cases12[i] & auxSNP3Value;
-        tripleTable->_cases[14] += Utils::popcount(aux);
+        tripleTable->_cases[14] += popcount(aux);
 
         aux = doubleTable->_cases20[i] & auxSNP3Value;
-        tripleTable->_cases[15] += Utils::popcount(aux);
+        tripleTable->_cases[15] += popcount(aux);
 
         aux = doubleTable->_cases21[i] & auxSNP3Value;
-        tripleTable->_cases[16] += Utils::popcount(aux);
+        tripleTable->_cases[16] += popcount(aux);
 
         aux = doubleTable->_cases22[i] & auxSNP3Value;
-        tripleTable->_cases[17] += Utils::popcount(aux);
+        tripleTable->_cases[17] += popcount(aux);
 
 
         auxSNP3Value = s3_cases[2][i];
 
         aux = doubleTable->_cases00[i] & auxSNP3Value;
-        tripleTable->_cases[18] += Utils::popcount(aux);
+        tripleTable->_cases[18] += popcount(aux);
 
         aux = doubleTable->_cases01[i] & auxSNP3Value;
-        tripleTable->_cases[19] += Utils::popcount(aux);
+        tripleTable->_cases[19] += popcount(aux);
 
         aux = doubleTable->_cases02[i] & auxSNP3Value;
-        tripleTable->_cases[20] += Utils::popcount(aux);
+        tripleTable->_cases[20] += popcount(aux);
 
         aux = doubleTable->_cases10[i] & auxSNP3Value;
-        tripleTable->_cases[21] += Utils::popcount(aux);
+        tripleTable->_cases[21] += popcount(aux);
 
         aux = doubleTable->_cases11[i] & auxSNP3Value;
-        tripleTable->_cases[22] += Utils::popcount(aux);
+        tripleTable->_cases[22] += popcount(aux);
 
         aux = doubleTable->_cases12[i] & auxSNP3Value;
-        tripleTable->_cases[23] += Utils::popcount(aux);
+        tripleTable->_cases[23] += popcount(aux);
 
         aux = doubleTable->_cases20[i] & auxSNP3Value;
-        tripleTable->_cases[24] += Utils::popcount(aux);
+        tripleTable->_cases[24] += popcount(aux);
 
         aux = doubleTable->_cases21[i] & auxSNP3Value;
-        tripleTable->_cases[25] += Utils::popcount(aux);
+        tripleTable->_cases[25] += popcount(aux);
 
         aux = doubleTable->_cases22[i] & auxSNP3Value;
-        tripleTable->_cases[26] += Utils::popcount(aux);
+        tripleTable->_cases[26] += popcount(aux);
     }
 
     for (int i = 0; i < _numEntriesCtrls; i++) {
         auxSNP3Value = s3_ctrls[0][i];
 
         aux = doubleTable->_ctrls00[i] & auxSNP3Value;
-        tripleTable->_ctrls[0] += Utils::popcount(aux);
+        tripleTable->_ctrls[0] += popcount(aux);
 
         aux = doubleTable->_ctrls01[i] & auxSNP3Value;
-        tripleTable->_ctrls[1] += Utils::popcount(aux);
+        tripleTable->_ctrls[1] += popcount(aux);
 
         aux = doubleTable->_ctrls02[i] & auxSNP3Value;
-        tripleTable->_ctrls[2] += Utils::popcount(aux);
+        tripleTable->_ctrls[2] += popcount(aux);
 
         aux = doubleTable->_ctrls10[i] & auxSNP3Value;
-        tripleTable->_ctrls[3] += Utils::popcount(aux);
+        tripleTable->_ctrls[3] += popcount(aux);
 
         aux = doubleTable->_ctrls11[i] & auxSNP3Value;
-        tripleTable->_ctrls[4] += Utils::popcount(aux);
+        tripleTable->_ctrls[4] += popcount(aux);
 
         aux = doubleTable->_ctrls12[i] & auxSNP3Value;
-        tripleTable->_ctrls[5] += Utils::popcount(aux);
+        tripleTable->_ctrls[5] += popcount(aux);
 
         aux = doubleTable->_ctrls20[i] & auxSNP3Value;
-        tripleTable->_ctrls[6] += Utils::popcount(aux);
+        tripleTable->_ctrls[6] += popcount(aux);
 
         aux = doubleTable->_ctrls21[i] & auxSNP3Value;
-        tripleTable->_ctrls[7] += Utils::popcount(aux);
+        tripleTable->_ctrls[7] += popcount(aux);
 
         aux = doubleTable->_ctrls22[i] & auxSNP3Value;
-        tripleTable->_ctrls[8] += Utils::popcount(aux);
+        tripleTable->_ctrls[8] += popcount(aux);
 
 
         auxSNP3Value = s3_ctrls[1][i];
 
         aux = doubleTable->_ctrls00[i] & auxSNP3Value;
-        tripleTable->_ctrls[9] += Utils::popcount(aux);
+        tripleTable->_ctrls[9] += popcount(aux);
 
         aux = doubleTable->_ctrls01[i] & auxSNP3Value;
-        tripleTable->_ctrls[10] += Utils::popcount(aux);
+        tripleTable->_ctrls[10] += popcount(aux);
 
         aux = doubleTable->_ctrls02[i] & auxSNP3Value;
-        tripleTable->_ctrls[11] += Utils::popcount(aux);
+        tripleTable->_ctrls[11] += popcount(aux);
 
         aux = doubleTable->_ctrls10[i] & auxSNP3Value;
-        tripleTable->_ctrls[12] += Utils::popcount(aux);
+        tripleTable->_ctrls[12] += popcount(aux);
 
         aux = doubleTable->_ctrls11[i] & auxSNP3Value;
-        tripleTable->_ctrls[13] += Utils::popcount(aux);
+        tripleTable->_ctrls[13] += popcount(aux);
 
         aux = doubleTable->_ctrls12[i] & auxSNP3Value;
-        tripleTable->_ctrls[14] += Utils::popcount(aux);
+        tripleTable->_ctrls[14] += popcount(aux);
 
         aux = doubleTable->_ctrls20[i] & auxSNP3Value;
-        tripleTable->_ctrls[15] += Utils::popcount(aux);
+        tripleTable->_ctrls[15] += popcount(aux);
 
         aux = doubleTable->_ctrls21[i] & auxSNP3Value;
-        tripleTable->_ctrls[16] += Utils::popcount(aux);
+        tripleTable->_ctrls[16] += popcount(aux);
 
         aux = doubleTable->_ctrls22[i] & auxSNP3Value;
-        tripleTable->_ctrls[17] += Utils::popcount(aux);
+        tripleTable->_ctrls[17] += popcount(aux);
 
 
         auxSNP3Value = s3_ctrls[2][i];
 
         aux = doubleTable->_ctrls00[i] & auxSNP3Value;
-        tripleTable->_ctrls[18] += Utils::popcount(aux);
+        tripleTable->_ctrls[18] += popcount(aux);
 
         aux = doubleTable->_ctrls01[i] & auxSNP3Value;
-        tripleTable->_ctrls[19] += Utils::popcount(aux);
+        tripleTable->_ctrls[19] += popcount(aux);
 
         aux = doubleTable->_ctrls02[i] & auxSNP3Value;
-        tripleTable->_ctrls[20] += Utils::popcount(aux);
+        tripleTable->_ctrls[20] += popcount(aux);
 
         aux = doubleTable->_ctrls10[i] & auxSNP3Value;
-        tripleTable->_ctrls[21] += Utils::popcount(aux);
+        tripleTable->_ctrls[21] += popcount(aux);
 
         aux = doubleTable->_ctrls11[i] & auxSNP3Value;
-        tripleTable->_ctrls[22] += Utils::popcount(aux);
+        tripleTable->_ctrls[22] += popcount(aux);
 
         aux = doubleTable->_ctrls12[i] & auxSNP3Value;
-        tripleTable->_ctrls[23] += Utils::popcount(aux);
+        tripleTable->_ctrls[23] += popcount(aux);
 
         aux = doubleTable->_ctrls20[i] & auxSNP3Value;
-        tripleTable->_ctrls[24] += Utils::popcount(aux);
+        tripleTable->_ctrls[24] += popcount(aux);
 
         aux = doubleTable->_ctrls21[i] & auxSNP3Value;
-        tripleTable->_ctrls[25] += Utils::popcount(aux);
+        tripleTable->_ctrls[25] += popcount(aux);
 
         aux = doubleTable->_ctrls22[i] & auxSNP3Value;
-        tripleTable->_ctrls[26] += Utils::popcount(aux);
+        tripleTable->_ctrls[26] += popcount(aux);
     }
 }
 

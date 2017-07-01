@@ -6,6 +6,7 @@
 #define MPI3SNP_ENTROPYSEARCH_H
 
 #include <cstdint>
+#include <vector>
 #include "../MutualInfo.h"
 #include "ContTable.h"
 
