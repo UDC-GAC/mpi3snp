@@ -13,15 +13,13 @@
 #include "../Dataset.h"
 
 struct ThreadParams {
-    ThreadParams(int tid, Distributor &distributor, Dataset &dataset, uint16_t numOutputs) :
+    ThreadParams(int tid, Distributor &distributor, Dataset &dataset, uint16_t numOutputs, Statistics &statistics) :
             tid(tid),
             distributor(distributor),
             dataset(dataset),
             numOutputs(numOutputs),
-            mutualInfo(new MutualInfo[numOutputs]) {
-        _numAnalyzed = 0;
-        _runtime = 0;
-    }
+            mutualInfo(new MutualInfo[numOutputs]),
+            statistics(statistics) {}
 
     ~ThreadParams() {
         delete[] mutualInfo;
@@ -32,9 +30,7 @@ struct ThreadParams {
     Dataset &dataset;
     const uint16_t numOutputs;
     MutualInfo *mutualInfo;
-    // Values for the return information
-    uint64_t _numAnalyzed;
-    double _runtime;
+    Statistics &statistics;
 };
 
 

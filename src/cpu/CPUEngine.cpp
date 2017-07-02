@@ -9,11 +9,7 @@
 #include "ThreadParams.h"
 #include "EntropySearch.h"
 #include "../ThreadError.h"
-#include "../Dataset.h"
-#include "../Distributor.h"
-#include "../IOMpi.h"
 #include <cfloat>
-#include <vector>
 
 CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
     this->num_proc = num_proc;
@@ -28,25 +24,21 @@ CPUEngine::~CPUEngine() {
 
 void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vector<MutualInfo> &mutual_info,
                         uint16_t num_outputs, Statistics &statistics) {
-    double stime = MPI_Wtime();
-    double etime;
-
+    statistics.Begin_timer("SNPs load time");
     Dataset dataset(tped_file, tfam_file, Dataset::Regular);
+    statistics.End_timer("SNPs load time");
 
-    Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count(), num_threads > 0);
-
-    etime = MPI_Wtime();
-
-    IOMpi::Instance().Cprintf<IOMpi::D>("Loaded %ld SNPs (%ld/%ld cases/controls) in %.2f seconds\n",
-                                        dataset.Get_SNP_count(), dataset.Get_case_count(), dataset.Get_ctrl_count(),
-                                        etime - stime);
+    Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count(), num_threads > 0, 5);
+    statistics.Add_value("SNPs", dataset.Get_SNP_count());
+    statistics.Add_value("Cases", dataset.Get_case_count());
+    statistics.Add_value("Controls", dataset.Get_ctrl_count());
 
     std::vector<pthread_t> threadIDs(num_threads, 0);
 
     // Computation of the single-SNP entropy
     std::vector<ThreadParams *> params(num_threads);
     for (int tid = 0; tid < num_threads; tid++) {
-        params[tid] = new ThreadParams(tid, distributor, dataset, num_outputs);
+        params[tid] = new ThreadParams(tid, distributor, dataset, num_outputs, statistics);
 
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, threadMI, params[tid]) != 0) {
@@ -96,15 +88,20 @@ void *CPUEngine::threadMI(void *arg) {
     uint16_t numEntriesWithMI = 0;
 
     uint64_t myTotalAnal = 0;
-    double stime = MPI_Wtime();
+    std::string timer_label;
+    timer_label += "Thread " + std::to_string(params->tid) + " runtime";
+    std::string analysis_label;
+    analysis_label += "Thread " + std::to_string(params->tid) + " analysis";
+
+    params->statistics.Begin_timer(timer_label);
 
     while (params->distributor.Get_pairs(pairs, myTotalAnal) > 0) {
         search.mutualInfo(pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
         pairs.clear();
     }
+    params->statistics.End_timer(timer_label);
+    params->statistics.Add_value(analysis_label, myTotalAnal);
 
-    params->_numAnalyzed = myTotalAnal;
-    params->_runtime = MPI_Wtime() - stime;
     memcpy(params->mutualInfo, mutualInfo, params->numOutputs * sizeof(MutualInfo));
 
     delete[] mutualInfo;
