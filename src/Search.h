@@ -31,8 +31,6 @@ public:
         Search *search_obj;
     };
 
-    ~Search();
-
     // Execute the epistasis search
     void execute();
 
@@ -44,8 +42,6 @@ private:
     std::vector<unsigned int> gpu_ids;
     unsigned int cpu_threads;
     bool use_mi;
-
-    MPI_Datatype MPI_MUTUAL_INFO;
 };
 
 #endif /* GPUSEARCHMI_H_ */

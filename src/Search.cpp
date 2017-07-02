@@ -44,7 +44,7 @@ Search::Builder &Search::Builder::Set_gpu_ids(std::vector<unsigned int> gpu_ids)
     return *this;
 }
 
-Search::Builder & Search::Builder::Set_cpu_threads(unsigned int threads) {
+Search::Builder &Search::Builder::Set_cpu_threads(unsigned int threads) {
     search_obj->cpu_threads = threads;
     return *this;
 }
@@ -58,22 +58,15 @@ Search *Search::Builder::Create_object() {
     return search_obj;
 }
 
-Search::Search() {
-    cpu_threads = std::thread::hardware_concurrency();
-    MPI_Type_contiguous(sizeof(MutualInfo), MPI_CHAR, &MPI_MUTUAL_INFO);
-    MPI_Type_commit(&MPI_MUTUAL_INFO);
-}
-
-Search::~Search() {
-    MPI_Type_free(&MPI_MUTUAL_INFO);
-}
+Search::Search() :
+        cpu_threads(std::thread::hardware_concurrency()) {}
 
 void Search::execute() {
     int proc_id, num_proc;
     MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
 
-    std::vector<MutualInfo> mutual_info;
+    std::vector<MutualInfo> mutual_info, result;
     Statistics statistics;
 
 #ifdef MPI3SNP_USE_GPU
@@ -94,27 +87,24 @@ void Search::execute() {
     }
 #endif
 
+    // Gather the results on the master process
     if (proc_id == 0) {
-        // Gather all the results
-        std::vector<MutualInfo> buff(num_outputs);
-        for (int rank = 1; rank < num_proc; rank++) {
-            MPI_Recv(&buff[0], num_outputs, MPI_MUTUAL_INFO, rank, 123, MPI_COMM_WORLD, NULL);
-            mutual_info.insert(mutual_info.end(), buff.begin(), buff.end());
-        }
+        result.resize(num_outputs * num_proc);
+    }
+    
+    MPI_Gather(&mutual_info.front(), num_outputs * sizeof(MutualInfo), MPI_BYTE,
+               &result.front(), num_outputs * sizeof(MutualInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
 
+    if (proc_id == 0) {
         // Sort the result
-        std::sort(&mutual_info[0], &mutual_info[num_proc * num_outputs],
-                  [](MutualInfo a, MutualInfo b) { return b < a; });
+        std::sort(result.begin(), result.end(), [](MutualInfo a, MutualInfo b) { return b < a; });
 
         // Write results to the output file
         std::ofstream of(out_file.c_str(), std::ios::out);
         for (int i = 0; i < num_outputs; i++) {
-            of << mutual_info[i].To_string() << '\n';
+            of << result[i].To_string() << '\n';
         }
         of.close();
-    } else {
-        // Send results to master
-        MPI_Send(&mutual_info[0], num_outputs, MPI_MUTUAL_INFO, 0, 123, MPI_COMM_WORLD);
     }
 
     IOMpi::Instance().Cprintf<IOMpi::D>("3-SNP analysis finalized\n");
