@@ -38,6 +38,8 @@ int IOMpi::Get_io_rank() {
             MPI_Error_string(error_class, error_string, &len);
             std::cerr << error_string << std::endl;
             io_rank = DEFAULT_IO_PROC;
+        } else if (io_rank < 0 || io_rank >= comm_size) {
+            io_rank = DEFAULT_IO_PROC;
         }
     }
     return io_rank;
