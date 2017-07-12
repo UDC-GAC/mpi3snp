@@ -3,7 +3,7 @@
 #include "Search.h"
 #include "args.hxx"
 
-Search *configure_search(int &argc, char **argv) {
+Search *configure_search(int &argc, char **&argv) {
     args::ArgumentParser parser(MPI3SNP_DESCRIPTION, MPI3SNP_HELP);
     args::Group required(parser, "Required arguments", args::Group::Validators::All);
     args::Positional<std::string> r_tped(required, "tped-file", "path to TPED file");
