@@ -13,9 +13,8 @@
 #include "../Dataset.h"
 
 struct ThreadParams {
-    ThreadParams(int tid, Distributor &distributor, Dataset &dataset, uint16_t numOutputs, Statistics &statistics) :
+    ThreadParams(int tid, Dataset &dataset, uint16_t numOutputs, Statistics &statistics) :
             tid(tid),
-            distributor(distributor),
             dataset(dataset),
             numOutputs(numOutputs),
             mutualInfo(new MutualInfo[numOutputs]),
@@ -26,8 +25,8 @@ struct ThreadParams {
     }
 
     const int tid;
-    Distributor &distributor;
     Dataset &dataset;
+    std::vector<std::pair<uint32_t, uint32_t>> pairs;
     const uint16_t numOutputs;
     MutualInfo *mutualInfo;
     Statistics &statistics;

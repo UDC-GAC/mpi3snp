@@ -28,7 +28,7 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
     Dataset dataset(tped_file, tfam_file, Dataset::Regular);
     statistics.End_timer("SNPs load time");
 
-    Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count(), num_threads > 0, 5);
+    Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count());
     statistics.Add_value("SNPs", dataset.Get_SNP_count());
     statistics.Add_value("Cases", dataset.Get_case_count());
     statistics.Add_value("Controls", dataset.Get_ctrl_count());
@@ -38,7 +38,8 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
     // Computation of the single-SNP entropy
     std::vector<ThreadParams *> params(num_threads);
     for (int tid = 0; tid < num_threads; tid++) {
-        params[tid] = new ThreadParams(tid, distributor, dataset, num_outputs, statistics);
+        params[tid] = new ThreadParams(tid, dataset, num_outputs, statistics);
+        distributor.Get_pairs(num_threads, tid, params[tid]->pairs);
 
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, threadMI, params[tid]) != 0) {
@@ -46,7 +47,9 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
                 pthread_cancel(threadIDs[i]);
             char message[80];
             sprintf(message, "error while creating the thread %i in process %i", tid, proc_id);
-            throw ThreadError(message);
+            //throw ThreadError(message);
+            printf("Error al crear hilos\n");
+            return;
         }
     }
 
@@ -75,9 +78,6 @@ void *CPUEngine::threadMI(void *arg) {
     EntropySearch search(params->dataset.Get_SNP_count(), params->dataset.Get_case_count(), params->dataset.Get_cases(),
                          params->dataset.Get_ctrl_count(), params->dataset.Get_ctrls());
 
-    std::vector<std::pair<uint32_t, uint32_t>> pairs;
-    pairs.reserve(Distributor::DEFAULT_PAIRS_BLOCK);
-
     // Variables to work with the outputs
     MutualInfo *mutualInfo = new MutualInfo[params->numOutputs];
     // The minimum value in the array
@@ -95,10 +95,8 @@ void *CPUEngine::threadMI(void *arg) {
 
     params->statistics.Begin_timer(timer_label);
 
-    while (params->distributor.Get_pairs(pairs, myTotalAnal) > 0) {
-        search.mutualInfo(pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
-        pairs.clear();
-    }
+    myTotalAnal = search.mutualInfo(params->pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
+
     params->statistics.End_timer(timer_label);
     params->statistics.Add_value(analysis_label, myTotalAnal);
 
