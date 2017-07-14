@@ -2060,8 +2060,9 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
 
 
 EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls, uint16_t numOutputs,
-                             uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases, uint32_t *host0Ctrls,
-                             uint32_t *host1Ctrls, uint32_t *host2Ctrls) {
+                             unsigned long block_size, uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases,
+                             uint32_t *host0Ctrls, uint32_t *host1Ctrls, uint32_t *host2Ctrls) :
+        block_size(block_size) {
     _isMI = isMI;
     _numSNPs = numSNPs;
     _numCases = numCases;
@@ -2071,13 +2072,13 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     _numEntriesCase = numCases / 32 + ((numCases % 32) > 0);
     _numEntriesCtrl = numCtrls / 32 + ((numCtrls % 32) > 0);
 
-    if (cudaSuccess != cudaMallocHost(&_tables, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
+    if (cudaSuccess != cudaMallocHost(&_tables, block_size * sizeof(GPUDoubleContTable)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMallocHost(&_hostMIValues, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(float)))
+    if (cudaSuccess != cudaMallocHost(&_hostMIValues, block_size * _numOutputs * sizeof(float)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMallocHost(&_hostMiIds, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
+    if (cudaSuccess != cudaMallocHost(&_hostMiIds, block_size * _numOutputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
 
     // Increase the size of the L1 compared to shared memory
@@ -2092,16 +2093,16 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleIG, cudaFuncCachePreferShared))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devIds, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(uint2)))
+    if (cudaSuccess != cudaMalloc(&_devIds, block_size * sizeof(uint2)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devDoubleTables, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(GPUDoubleContTable)))
+    if (cudaSuccess != cudaMalloc(&_devDoubleTables, block_size * sizeof(GPUDoubleContTable)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devMIValues, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(float)))
+    if (cudaSuccess != cudaMalloc(&_devMIValues, block_size * _numOutputs * sizeof(float)))
         throw CUDAError(cudaGetLastError());
 
-    if (cudaSuccess != cudaMalloc(&_devMiIds, Distributor::DEFAULT_PAIRS_BLOCK * _numOutputs * sizeof(uint3)))
+    if (cudaSuccess != cudaMalloc(&_devMiIds, block_size * _numOutputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
 
     float invInds = 1.0 / (numCases + numCtrls);
@@ -2121,12 +2122,12 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     if (cudaSuccess != cudaMemcpyToSymbol(_MAX_FLOAT, &maxFL, sizeof(float), 0, cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
 
-    for (int i = 0; i < Distributor::DEFAULT_PAIRS_BLOCK; i++) {
+    for (int i = 0; i < block_size; i++) {
         _tables[i].initialize(_numEntriesCase, _numEntriesCtrl);
     }
 
     if (cudaSuccess !=
-        cudaMemcpy(_devDoubleTables, _tables, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(GPUDoubleContTable),
+        cudaMemcpy(_devDoubleTables, _tables, block_size * sizeof(GPUDoubleContTable),
                    cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
 
@@ -2182,7 +2183,7 @@ EntropySearch::~EntropySearch() {
     if (cudaSuccess != cudaFree(_dev2Ctrls))
         throw CUDAError(cudaGetLastError());
 
-    for (int i = 0; i < Distributor::DEFAULT_PAIRS_BLOCK; i++) {
+    for (int i = 0; i < block_size; i++) {
         _tables[i].finalize();
     }
     if (cudaSuccess != cudaFreeHost(_tables))

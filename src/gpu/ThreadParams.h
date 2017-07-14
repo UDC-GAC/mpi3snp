@@ -13,12 +13,10 @@
 #include "../Distributor.h"
 
 struct ThreadParams {
-    ThreadParams(unsigned int gpu_id, unsigned int num_outputs, Dataset &dataset, Distributor &dist, bool use_MI,
-                 Statistics &stats) :
+    ThreadParams(unsigned int gpu_id, unsigned int num_outputs, Dataset &dataset, bool use_MI, Statistics &stats) :
             gpu_id(gpu_id),
             num_outputs(num_outputs),
             dataset(dataset),
-            distributor(dist),
             mi(use_MI),
             statistics(stats) {
         mutual_info = new MutualInfo[num_outputs];
@@ -32,7 +30,7 @@ struct ThreadParams {
     unsigned int gpu_id;
     unsigned int num_outputs;
     Dataset &dataset;
-    Distributor &distributor;
+    std::vector<std::pair<uint32_t, uint32_t >> pairs;
     bool mi;
     // Return values
     Statistics &statistics;

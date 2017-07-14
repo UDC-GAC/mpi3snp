@@ -42,12 +42,13 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     Dataset dataset(tped, tfam, Dataset::Transposed);
     statistics.End_timer(snp_load_label);
 
-    Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count(), gpu_ids.size() > 1);
+    Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count());
     std::vector<pthread_t> threadIDs(gpu_ids.size(), 0);
     std::vector<ThreadParams *> threadParams(gpu_ids.size());
     for (int tid = 0; tid < gpu_ids.size(); tid++) {
         // Create parameters for CPU threads
-        threadParams[tid] = new ThreadParams(gpu_ids[tid], num_outputs, dataset, distributor, use_mi, statistics);
+        threadParams[tid] = new ThreadParams(gpu_ids[tid], num_outputs, dataset, use_mi, statistics);
+        distributor.Get_pairs(gpu_ids.size(), tid, threadParams[tid]->pairs);
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], NULL, handle, threadParams[tid]) != 0) {
             //Utils::exit("Thread creating failed\n");
@@ -78,7 +79,6 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
 void *GPUEngine::handle(void *arg) {
     ThreadParams *params = (ThreadParams *) arg;
     Dataset &dataset = params->dataset;
-    Distributor &distributor = params->distributor;
     unsigned int num_outputs = params->num_outputs;
     unsigned int gpu_id = params->gpu_id;
     bool isMI = params->mi;
@@ -107,16 +107,13 @@ void *GPUEngine::handle(void *arg) {
         throw CUDAError(cudaGetLastError());
     memcpy(hCt2, &dataset.Get_ctrls()[0][2][0], dataset.Get_ctrls()[0][2].size() * sizeof(uint32_t));
 
+    const unsigned int pairs_iter = 5000;
     EntropySearch *search = new EntropySearch(isMI, dataset.Get_SNP_count(), dataset.Get_case_count(),
-                                              dataset.Get_ctrl_count(), num_outputs,
+                                              dataset.Get_ctrl_count(), num_outputs, pairs_iter,
                                               hCa0, hCa1, hCa2, hCt0, hCt1, hCt2);
-
     uint2 *auxIds;
-    if (cudaSuccess != cudaMallocHost(&auxIds, Distributor::DEFAULT_PAIRS_BLOCK * sizeof(uint2)))
+    if (cudaSuccess != cudaMallocHost(&auxIds, pairs_iter * sizeof(uint2)))
         throw CUDAError(cudaGetLastError());
-
-    std::vector<std::pair<uint32_t, uint32_t >> temp;
-    temp.reserve(Distributor::DEFAULT_PAIRS_BLOCK);
 
     // Variables to work with the outputs
     MutualInfo *mutualInfo = params->mutual_info;
@@ -137,15 +134,14 @@ void *GPUEngine::handle(void *arg) {
 
     statistics.Begin_timer(timer_label);
 
-    while ((numPairsBlock = distributor.Get_pairs(temp, myTotalAnal)) > 0) {
-        for (int i=0; i<temp.size(); i++){
-            auxIds[i].x = temp[i].first;
-            auxIds[i].y = temp[i].second;
+    for (unsigned long i = 0; i < params->pairs.size(); i += pairs_iter) {
+        const unsigned long num_pairs = params->pairs.size() - i < pairs_iter ? params->pairs.size() - i : pairs_iter;
+        for (int j = 0; j < num_pairs; j++) {
+            auxIds[j].x = params->pairs[i + j].first;
+            auxIds[j].y = params->pairs[i + j].second;
         }
-        temp.clear();
-        search->mutualInfo(numPairsBlock, auxIds, mutualInfo, minMI, minMIPos, numEntriesWithMI);
+        search->mutualInfo(num_pairs, auxIds, mutualInfo, minMI, minMIPos, numEntriesWithMI);
     }
-
     cudaDeviceSynchronize();
 
     statistics.End_timer(timer_label);

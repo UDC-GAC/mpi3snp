@@ -11,8 +11,8 @@
 class EntropySearch {
 public:
     EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls, uint16_t numOutputs,
-                  uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases, uint32_t *host0Ctrls,
-                  uint32_t *host1Ctrls, uint32_t *host2Ctrls);
+                  unsigned long block_size, uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases,
+                  uint32_t *host0Ctrls, uint32_t *host1Ctrls, uint32_t *host2Ctrls);
 
     ~EntropySearch();
 
@@ -21,6 +21,7 @@ public:
 
 private:
     bool _isMI;
+    const unsigned long block_size;
     uint16_t _numOutputs;
 
     uint32_t _numSNPs;
