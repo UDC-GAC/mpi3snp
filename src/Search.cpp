@@ -71,7 +71,7 @@ void Search::execute() {
 
 #ifdef MPI3SNP_USE_GPU
     try {
-        GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, gpu_ids, use_mi);
+        GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, use_mi);
         gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
         IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
