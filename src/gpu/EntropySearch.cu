@@ -2060,8 +2060,8 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
 
 
 EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls, uint16_t numOutputs,
-                             unsigned long block_size, uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases,
-                             uint32_t *host0Ctrls, uint32_t *host1Ctrls, uint32_t *host2Ctrls) :
+                             unsigned long block_size, std::vector<std::vector<uint32_t> *> cases,
+                             std::vector<std::vector<uint32_t> *> ctrls) :
         block_size(block_size) {
     _isMI = isMI;
     _numSNPs = numSNPs;
@@ -2147,22 +2147,22 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
 
     // All the entries are cyclicly ordered by SNPs
     if (cudaSuccess !=
-        cudaMemcpy(_dev0Cases, host0Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        cudaMemcpy(_dev0Cases, &cases[0][0][0], _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess !=
-        cudaMemcpy(_dev1Cases, host1Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        cudaMemcpy(_dev1Cases, &cases[0][1][0], _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess !=
-        cudaMemcpy(_dev2Cases, host2Cases, _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        cudaMemcpy(_dev2Cases, &cases[0][2][0], _numSNPs * _numEntriesCase * sizeof(uint32_t), cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess !=
-        cudaMemcpy(_dev0Ctrls, host0Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        cudaMemcpy(_dev0Ctrls, &ctrls[0][0][0], _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess !=
-        cudaMemcpy(_dev1Ctrls, host1Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        cudaMemcpy(_dev1Ctrls, &ctrls[0][1][0], _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess !=
-        cudaMemcpy(_dev2Ctrls, host2Ctrls, _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
+        cudaMemcpy(_dev2Ctrls, &ctrls[0][2][0], _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
 }
 

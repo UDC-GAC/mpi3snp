@@ -7,12 +7,13 @@
 
 #include "../MutualInfo.h"
 #include "GPUContTable.h"
+#include <vector>
 
 class EntropySearch {
 public:
     EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls, uint16_t numOutputs,
-                  unsigned long block_size, uint32_t *host0Cases, uint32_t *host1Cases, uint32_t *host2Cases,
-                  uint32_t *host0Ctrls, uint32_t *host1Ctrls, uint32_t *host2Ctrls);
+                  unsigned long block_size, std::vector<std::vector<uint32_t> *> cases,
+                  std::vector<std::vector<uint32_t> *> ctrls);
 
     ~EntropySearch();
 
