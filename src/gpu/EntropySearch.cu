@@ -2059,12 +2059,11 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
 
 EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
                              std::vector<std::vector<uint32_t> *> cases, std::vector<std::vector<uint32_t> *> ctrls) :
-        block_size(5000),
         _isMI(isMI),
         _numSNPs(numSNPs),
         _numEntriesCase(numCases / 32 + ((numCases % 32) > 0)),
         _numEntriesCtrl(numCtrls / 32 + ((numCtrls % 32) > 0)) {
-// Allocate the arrays
+    // Allocate the arrays
     if (cudaSuccess != cudaMalloc(&_dev0Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess != cudaMalloc(&_dev1Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t)))
@@ -2145,6 +2144,15 @@ EntropySearch::~EntropySearch() {
 
 void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs, size_t num_outputs,
                                MutualInfo *mutualInfo) {
+    size_t free_mem, total_mem;
+    cudaMemGetInfo(&free_mem, &total_mem);
+    // Per pair memory usage
+    const size_t pp_memusage =
+            sizeof(uint2) + sizeof(GPUDoubleContTable) + 9 * (_numEntriesCase + _numEntriesCtrl) * sizeof(uint32_t);
+    // Per output memory usage
+    const size_t po_memusage = num_outputs * (sizeof(float) + sizeof(uint3));
+    const size_t block_size = (size_t) round(free_mem * .85 / (pp_memusage + po_memusage));
+
     if (cudaSuccess != cudaMalloc(&_devIds, block_size * sizeof(uint2)))
         throw CUDAError(cudaGetLastError());
 
@@ -2235,7 +2243,8 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
                                       cudaMemcpyDeviceToHost))
             throw CUDAError(cudaGetLastError());
 
-        _findNHighestMI(_hostMiIds, _hostMIValues, num_pairs * num_outputs, minMI, minMIPos, numEntriesWithMI, num_outputs, mutualInfo);
+        _findNHighestMI(_hostMiIds, _hostMIValues, num_pairs * num_outputs, minMI, minMIPos, numEntriesWithMI,
+                        num_outputs, mutualInfo);
     }
 
     if (cudaSuccess != cudaFree(_devMIValues))
@@ -2260,7 +2269,8 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
         throw CUDAError(cudaGetLastError());
 }
 
-void EntropySearch::_findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
+void EntropySearch::_findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI,
+                                    uint16_t &minMIPos, uint16_t &numEntriesWithMI,
                                     size_t num_outputs, MutualInfo *mutualInfo) {
     int iter = 0;
     MutualInfo *auxMI;

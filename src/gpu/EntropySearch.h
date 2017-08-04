@@ -20,7 +20,6 @@ public:
 
 private:
     bool _isMI;
-    const unsigned long block_size;
 
     uint32_t _numSNPs;
     uint16_t _numEntriesCase;
