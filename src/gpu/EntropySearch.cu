@@ -2178,17 +2178,13 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
     float *_devMIValues;
     if (cudaSuccess != cudaMalloc(&_devMIValues, block_size * num_outputs * sizeof(float)))
         throw CUDAError(cudaGetLastError());
-    float *_hostMIValues;
-    if (cudaSuccess != cudaMallocHost(&_hostMIValues, block_size * num_outputs * sizeof(float)))
-        throw CUDAError(cudaGetLastError());
+    float *_hostMIValues = new float[block_size * num_outputs];
 
     // Auxiliary arrays to store the ids that are in the list of MIs
     uint3 *_devMiIds;
     if (cudaSuccess != cudaMalloc(&_devMiIds, block_size * num_outputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
-    uint3 *_hostMiIds;
-    if (cudaSuccess != cudaMallocHost(&_hostMiIds, block_size * num_outputs * sizeof(uint3)))
-        throw CUDAError(cudaGetLastError());
+    uint3 *_hostMiIds = new uint3[block_size * num_outputs];
 
     // The minimum value in the array
     float minMI = FLT_MAX;
@@ -2253,20 +2249,17 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess != cudaFree(_devMiIds))
         throw CUDAError(cudaGetLastError());
-    if (cudaSuccess != cudaFreeHost(_hostMIValues))
-        throw CUDAError(cudaGetLastError());
-    if (cudaSuccess != cudaFreeHost(_hostMiIds))
-        throw CUDAError(cudaGetLastError());
-
     if (cudaSuccess != cudaFree(_devIds))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaFree(_devDoubleTables))
         throw CUDAError(cudaGetLastError());
 
     for (int i = 0; i < block_size; i++) {
         _tables[i].finalize();
     }
-
-    if (cudaSuccess != cudaFree(_devDoubleTables))
-        throw CUDAError(cudaGetLastError());
+    delete[] _tables;
+    delete[] _hostMIValues;
+    delete[] _hostMiIds;
 }
 
 void EntropySearch::_findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI,
