@@ -11,19 +11,16 @@
 
 class EntropySearch {
 public:
-    EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls, uint16_t numOutputs,
-                  unsigned long block_size, std::vector<std::vector<uint32_t> *> cases,
-                  std::vector<std::vector<uint32_t> *> ctrls);
+    EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
+                  std::vector<std::vector<uint32_t> *> cases, std::vector<std::vector<uint32_t> *> ctrls);
 
     ~EntropySearch();
 
-    void mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutualInfo, float &minMI, uint16_t &minMIPos,
-                    uint16_t &numEntriesWithMI);
+    void mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs, size_t num_outputs, MutualInfo *mutualInfo);
 
 private:
     bool _isMI;
     const unsigned long block_size;
-    uint16_t _numOutputs;
 
     uint32_t _numSNPs;
     uint16_t _numCases;
@@ -51,8 +48,8 @@ private:
     uint3 *_devMiIds;
     uint3 *_hostMiIds;
 
-    void _findNHighestMI(MutualInfo *mutualInfo, uint64_t totalValues, float &minMI, uint16_t &minMIPos,
-                         uint16_t &numEntriesWithMI);
+    void _findNHighestMI(uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
+                         size_t num_outputs, MutualInfo *mutualInfo);
 };
 
 

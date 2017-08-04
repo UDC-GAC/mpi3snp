@@ -3,7 +3,6 @@
 //
 
 #include "EntropySearch.h"
-#include "../Distributor.h"
 #include <float.h>
 #include <algorithm>
 
@@ -2058,27 +2057,18 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
     }
 }
 
-
-EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls, uint16_t numOutputs,
-                             unsigned long block_size, std::vector<std::vector<uint32_t> *> cases,
-                             std::vector<std::vector<uint32_t> *> ctrls) :
-        block_size(block_size) {
+EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
+                             std::vector<std::vector<uint32_t> *> cases, std::vector<std::vector<uint32_t> *> ctrls) :
+        block_size(5000) {
     _isMI = isMI;
     _numSNPs = numSNPs;
     _numCases = numCases;
     _numCtrls = numCtrls;
-    _numOutputs = numOutputs;
 
     _numEntriesCase = numCases / 32 + ((numCases % 32) > 0);
     _numEntriesCtrl = numCtrls / 32 + ((numCtrls % 32) > 0);
 
     if (cudaSuccess != cudaMallocHost(&_tables, block_size * sizeof(GPUDoubleContTable)))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaMallocHost(&_hostMIValues, block_size * _numOutputs * sizeof(float)))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaMallocHost(&_hostMiIds, block_size * _numOutputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
 
     // Increase the size of the L1 compared to shared memory
@@ -2097,12 +2087,6 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
         throw CUDAError(cudaGetLastError());
 
     if (cudaSuccess != cudaMalloc(&_devDoubleTables, block_size * sizeof(GPUDoubleContTable)))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaMalloc(&_devMIValues, block_size * _numOutputs * sizeof(float)))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaMalloc(&_devMiIds, block_size * _numOutputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
 
     float invInds = 1.0 / (numCases + numCtrls);
@@ -2191,74 +2175,95 @@ EntropySearch::~EntropySearch() {
 
     if (cudaSuccess != cudaFree(_devDoubleTables))
         throw CUDAError(cudaGetLastError());
+}
+
+void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs, size_t num_outputs,
+                               MutualInfo *mutualInfo) {
+    if (cudaSuccess != cudaMalloc(&_devMIValues, block_size * num_outputs * sizeof(float)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMalloc(&_devMiIds, block_size * num_outputs * sizeof(uint3)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMallocHost(&_hostMIValues, block_size * num_outputs * sizeof(float)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess != cudaMallocHost(&_hostMiIds, block_size * num_outputs * sizeof(uint3)))
+        throw CUDAError(cudaGetLastError());
+
+    // The minimum value in the array
+    float minMI = FLT_MAX;
+    // The position of the minimum value
+    uint16_t minMIPos = 0;
+    // Number of entries of the array full
+    uint16_t numEntriesWithMI = 0;
+
+    uint2 ids[block_size];
+    for (unsigned long i = 0; i < pairs.size(); i += block_size) {
+        const unsigned long num_pairs = pairs.size() - i < block_size ? pairs.size() - i : block_size;
+        for (int j = 0; j < num_pairs; j++) {
+            ids[j].x = pairs[i + j].first;
+            ids[j].y = pairs[i + j].second;
+        }
+
+        if (cudaSuccess != cudaMemcpy(_devIds, ids, num_pairs * sizeof(uint2), cudaMemcpyHostToDevice))
+            throw CUDAError(cudaGetLastError());
+
+        uint32_t nblocks = (num_pairs + NUM_TH_PER_BLOCK - 1) / NUM_TH_PER_BLOCK;
+        dim3 gridDouble(nblocks, 1);
+        dim3 blocksDouble(NUM_TH_PER_BLOCK, 1);
+
+        // Starts computing the double contingency tables
+        _kernelDoubleTable << < gridDouble, blocksDouble, 0 >> > (num_pairs, _numSNPs,
+                _numEntriesCase, _numEntriesCtrl, _devIds,
+                _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
+                _devDoubleTables);
+
+        // Now you need to calculate the MI for each triple
+        // Each block performs all the triples for one pair
+        // The necessary shared memory is to store the double contingency table of the matrix
+        dim3 gridMI(num_pairs, 1);
+        dim3 blockMI(NUM_TH_PER_BLOCK, 1);
+        uint32_t sharedSize = 9 * (_numEntriesCase + _numEntriesCtrl) * sizeof(uint32_t);
+        sharedSize += num_outputs * NUM_TH_PER_BLOCK * (sizeof(float) + sizeof(uint32_t));
+
+        if (_isMI) {
+            _kernelTripleMI << < gridMI, blockMI, sharedSize >> >
+                                                  (num_pairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
+                                                          _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
+                                                          _devDoubleTables, num_outputs, _devMIValues, _devMiIds);
+        } else {
+            _kernelTripleIG << < gridMI, blockMI, sharedSize >> >
+                                                  (num_pairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
+                                                          _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
+                                                          _devDoubleTables, num_outputs, _devMIValues, _devMiIds);
+        }
+
+        if (cudaSuccess != cudaMemcpy(_hostMIValues, _devMIValues, num_pairs * num_outputs * sizeof(float),
+                                      cudaMemcpyDeviceToHost))
+            throw CUDAError(cudaGetLastError());
+        if (cudaSuccess != cudaMemcpy(_hostMiIds, _devMiIds, num_pairs * num_outputs * sizeof(uint3),
+                                      cudaMemcpyDeviceToHost))
+            throw CUDAError(cudaGetLastError());
+
+        _findNHighestMI(num_pairs * num_outputs, minMI, minMIPos, numEntriesWithMI, num_outputs, mutualInfo);
+    }
 
     if (cudaSuccess != cudaFree(_devMIValues))
         throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaFreeHost(_hostMIValues))
-        throw CUDAError(cudaGetLastError());
-
     if (cudaSuccess != cudaFree(_devMiIds))
         throw CUDAError(cudaGetLastError());
-
+    if (cudaSuccess != cudaFreeHost(_hostMIValues))
+        throw CUDAError(cudaGetLastError());
     if (cudaSuccess != cudaFreeHost(_hostMiIds))
         throw CUDAError(cudaGetLastError());
 }
 
-void EntropySearch::mutualInfo(uint64_t numPairs, uint2 *ids, MutualInfo *mutualInfo, float &minMI,
-                               uint16_t &minMIPos,
-                               uint16_t &numEntriesWithMI) {
-    if (cudaSuccess != cudaMemcpy(_devIds, ids, numPairs * sizeof(uint2), cudaMemcpyHostToDevice))
-        throw CUDAError(cudaGetLastError());
-
-    uint32_t nblocks = (numPairs + NUM_TH_PER_BLOCK - 1) / NUM_TH_PER_BLOCK;
-    dim3 gridDouble(nblocks, 1);
-    dim3 blocksDouble(NUM_TH_PER_BLOCK, 1);
-
-    // Starts computing the double contingency tables
-    _kernelDoubleTable << < gridDouble, blocksDouble, 0 >> > (numPairs, _numSNPs,
-            _numEntriesCase, _numEntriesCtrl, _devIds,
-            _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
-            _devDoubleTables);
-
-    // Now you need to calculate the MI for each triple
-    // Each block performs all the triples for one pair
-    // The necessary shared memory is to store the double contingency table of the matrix
-    dim3 gridMI(numPairs, 1);
-    dim3 blockMI(NUM_TH_PER_BLOCK, 1);
-    uint32_t sharedSize = 9 * (_numEntriesCase + _numEntriesCtrl) * sizeof(uint32_t);
-    sharedSize += _numOutputs * NUM_TH_PER_BLOCK * (sizeof(float) + sizeof(uint32_t));
-
-    if (_isMI) {
-        _kernelTripleMI << < gridMI, blockMI, sharedSize >> >
-                                              (numPairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
-                                                      _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
-                                                      _devDoubleTables, _numOutputs, _devMIValues, _devMiIds);
-    } else {
-        _kernelTripleIG << < gridMI, blockMI, sharedSize >> >
-                                              (numPairs, _numSNPs, _numEntriesCase, _numEntriesCtrl,
-                                                      _devIds, _dev0Cases, _dev1Cases, _dev2Cases, _dev0Ctrls, _dev1Ctrls, _dev2Ctrls,
-                                                      _devDoubleTables, _numOutputs, _devMIValues, _devMiIds);
-    }
-
-    if (cudaSuccess != cudaMemcpy(_hostMIValues, _devMIValues, numPairs * _numOutputs * sizeof(float),
-                                  cudaMemcpyDeviceToHost))
-        throw CUDAError(cudaGetLastError());
-    if (cudaSuccess != cudaMemcpy(_hostMiIds, _devMiIds, numPairs * _numOutputs * sizeof(uint3),
-                                  cudaMemcpyDeviceToHost))
-        throw CUDAError(cudaGetLastError());
-
-    _findNHighestMI(mutualInfo, numPairs * _numOutputs, minMI, minMIPos, numEntriesWithMI);
-}
-
-void EntropySearch::_findNHighestMI(MutualInfo *mutualInfo, uint64_t totalValues,
-                                    float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI) {
+void EntropySearch::_findNHighestMI(uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
+                                    size_t num_outputs, MutualInfo *mutualInfo) {
     int iter = 0;
     MutualInfo *auxMI;
     float auxValue;
 
     if (numEntriesWithMI == 0) { // The first values are directly stored
-        for (iter = 0; iter < _numOutputs; iter++) {
+        for (iter = 0; iter < num_outputs; iter++) {
             auxValue = _hostMIValues[iter];
 
             auxMI = &mutualInfo[iter];
@@ -2272,7 +2277,7 @@ void EntropySearch::_findNHighestMI(MutualInfo *mutualInfo, uint64_t totalValues
                 minMIPos = iter;
             }
         }
-        numEntriesWithMI += _numOutputs;
+        numEntriesWithMI += num_outputs;
     }
 
     for (; iter < totalValues; iter++) {
@@ -2286,7 +2291,7 @@ void EntropySearch::_findNHighestMI(MutualInfo *mutualInfo, uint64_t totalValues
             auxMI->_mutualInfoValue = auxValue;
 
             // Find the new minimum
-            auxMI = std::min_element(mutualInfo, mutualInfo + _numOutputs);
+            auxMI = std::min_element(mutualInfo, mutualInfo + num_outputs);
             minMI = auxMI->_mutualInfoValue;
             uint16_t i = 0;
             while (1) {
