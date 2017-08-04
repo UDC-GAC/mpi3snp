@@ -34,19 +34,7 @@ private:
     uint32_t *_dev2Ctrls;
     uint2 *_devIds;
 
-    // Auxiliary array for the contingency tables between the two kernels
-    GPUDoubleContTable *_devDoubleTables;
-    GPUDoubleContTable *_tables;
-
-    // Auxiliary array to store the MI values of each block
-    float *_devMIValues;
-    float *_hostMIValues;
-
-    // Auxiliary arrays to store the ids that are in the list of MIs
-    uint3 *_devMiIds;
-    uint3 *_hostMiIds;
-
-    void _findNHighestMI(uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
+    void _findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
                          size_t num_outputs, MutualInfo *mutualInfo);
 };
 

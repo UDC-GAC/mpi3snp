@@ -2064,54 +2064,7 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
         _numSNPs(numSNPs),
         _numEntriesCase(numCases / 32 + ((numCases % 32) > 0)),
         _numEntriesCtrl(numCtrls / 32 + ((numCtrls % 32) > 0)) {
-    if (cudaSuccess != cudaMallocHost(&_tables, block_size * sizeof(GPUDoubleContTable)))
-        throw CUDAError(cudaGetLastError());
-
-    // Increase the size of the L1 compared to shared memory
-    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelDoubleTable, cudaFuncCachePreferL1))
-        throw CUDAError(cudaGetLastError());
-
-    // Increase the size of the shared memory compared to L1
-    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleMI, cudaFuncCachePreferShared))
-        throw CUDAError(cudaGetLastError());
-
-    // Increase the size of the shared memory compared to L1
-    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleIG, cudaFuncCachePreferShared))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaMalloc(&_devIds, block_size * sizeof(uint2)))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaMalloc(&_devDoubleTables, block_size * sizeof(GPUDoubleContTable)))
-        throw CUDAError(cudaGetLastError());
-
-    float invInds = 1.0 / (numCases + numCtrls);
-    float p = numCases * invInds;
-    float entY = (-1.0) * p * log2(p);
-
-    p = numCtrls * invInds;
-    entY -= p * log2(p);
-
-    if (cudaSuccess != cudaMemcpyToSymbol(_invInds, &invInds, sizeof(float), 0, cudaMemcpyHostToDevice))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaMemcpyToSymbol(_entY, &entY, sizeof(float), 0, cudaMemcpyHostToDevice))
-        throw CUDAError(cudaGetLastError());
-
-    float maxFL = FLT_MAX;
-    if (cudaSuccess != cudaMemcpyToSymbol(_MAX_FLOAT, &maxFL, sizeof(float), 0, cudaMemcpyHostToDevice))
-        throw CUDAError(cudaGetLastError());
-
-    for (int i = 0; i < block_size; i++) {
-        _tables[i].initialize(_numEntriesCase, _numEntriesCtrl);
-    }
-
-    if (cudaSuccess !=
-        cudaMemcpy(_devDoubleTables, _tables, block_size * sizeof(GPUDoubleContTable),
-                   cudaMemcpyHostToDevice))
-        throw CUDAError(cudaGetLastError());
-
-    // Allocate the arrays
+// Allocate the arrays
     if (cudaSuccess != cudaMalloc(&_dev0Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t)))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess != cudaMalloc(&_dev1Cases, _numEntriesCase * _numSNPs * sizeof(uint32_t)))
@@ -2144,12 +2097,38 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
     if (cudaSuccess !=
         cudaMemcpy(_dev2Ctrls, &ctrls[0][2][0], _numSNPs * _numEntriesCtrl * sizeof(uint32_t), cudaMemcpyHostToDevice))
         throw CUDAError(cudaGetLastError());
+
+    // Increase the size of the L1 compared to shared memory
+    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelDoubleTable, cudaFuncCachePreferL1))
+        throw CUDAError(cudaGetLastError());
+
+    // Increase the size of the shared memory compared to L1
+    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleMI, cudaFuncCachePreferShared))
+        throw CUDAError(cudaGetLastError());
+
+    // Increase the size of the shared memory compared to L1
+    if (cudaSuccess != cudaFuncSetCacheConfig(_kernelTripleIG, cudaFuncCachePreferShared))
+        throw CUDAError(cudaGetLastError());
+
+    float invInds = 1.0 / (numCases + numCtrls);
+    float p = numCases * invInds;
+    float entY = (-1.0) * p * log2(p);
+
+    p = numCtrls * invInds;
+    entY -= p * log2(p);
+
+    if (cudaSuccess != cudaMemcpyToSymbol(_invInds, &invInds, sizeof(float), 0, cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+
+    if (cudaSuccess != cudaMemcpyToSymbol(_entY, &entY, sizeof(float), 0, cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+
+    float maxFL = FLT_MAX;
+    if (cudaSuccess != cudaMemcpyToSymbol(_MAX_FLOAT, &maxFL, sizeof(float), 0, cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
 }
 
 EntropySearch::~EntropySearch() {
-    if (cudaSuccess != cudaFree(_devIds))
-        throw CUDAError(cudaGetLastError());
-
     if (cudaSuccess != cudaFree(_dev0Cases))
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess != cudaFree(_dev1Cases))
@@ -2162,25 +2141,42 @@ EntropySearch::~EntropySearch() {
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess != cudaFree(_dev2Ctrls))
         throw CUDAError(cudaGetLastError());
-
-    for (int i = 0; i < block_size; i++) {
-        _tables[i].finalize();
-    }
-    if (cudaSuccess != cudaFreeHost(_tables))
-        throw CUDAError(cudaGetLastError());
-
-    if (cudaSuccess != cudaFree(_devDoubleTables))
-        throw CUDAError(cudaGetLastError());
 }
 
 void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs, size_t num_outputs,
                                MutualInfo *mutualInfo) {
+    if (cudaSuccess != cudaMalloc(&_devIds, block_size * sizeof(uint2)))
+        throw CUDAError(cudaGetLastError());
+
+    // Auxiliary array for the contingency tables between the two kernels
+    GPUDoubleContTable *_tables;
+    if (cudaSuccess != cudaMallocHost(&_tables, block_size * sizeof(GPUDoubleContTable)))
+        throw CUDAError(cudaGetLastError());
+    for (int i = 0; i < block_size; i++) {
+        _tables[i].initialize(_numEntriesCase, _numEntriesCtrl);
+    }
+
+    GPUDoubleContTable *_devDoubleTables;
+    if (cudaSuccess != cudaMalloc(&_devDoubleTables, block_size * sizeof(GPUDoubleContTable)))
+        throw CUDAError(cudaGetLastError());
+    if (cudaSuccess !=
+        cudaMemcpy(_devDoubleTables, _tables, block_size * sizeof(GPUDoubleContTable),
+                   cudaMemcpyHostToDevice))
+        throw CUDAError(cudaGetLastError());
+
+    // Auxiliary array to store the MI values of each block
+    float *_devMIValues;
     if (cudaSuccess != cudaMalloc(&_devMIValues, block_size * num_outputs * sizeof(float)))
         throw CUDAError(cudaGetLastError());
-    if (cudaSuccess != cudaMalloc(&_devMiIds, block_size * num_outputs * sizeof(uint3)))
-        throw CUDAError(cudaGetLastError());
+    float *_hostMIValues;
     if (cudaSuccess != cudaMallocHost(&_hostMIValues, block_size * num_outputs * sizeof(float)))
         throw CUDAError(cudaGetLastError());
+
+    // Auxiliary arrays to store the ids that are in the list of MIs
+    uint3 *_devMiIds;
+    if (cudaSuccess != cudaMalloc(&_devMiIds, block_size * num_outputs * sizeof(uint3)))
+        throw CUDAError(cudaGetLastError());
+    uint3 *_hostMiIds;
     if (cudaSuccess != cudaMallocHost(&_hostMiIds, block_size * num_outputs * sizeof(uint3)))
         throw CUDAError(cudaGetLastError());
 
@@ -2239,7 +2235,7 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
                                       cudaMemcpyDeviceToHost))
             throw CUDAError(cudaGetLastError());
 
-        _findNHighestMI(num_pairs * num_outputs, minMI, minMIPos, numEntriesWithMI, num_outputs, mutualInfo);
+        _findNHighestMI(_hostMiIds, _hostMIValues, num_pairs * num_outputs, minMI, minMIPos, numEntriesWithMI, num_outputs, mutualInfo);
     }
 
     if (cudaSuccess != cudaFree(_devMIValues))
@@ -2250,9 +2246,21 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
         throw CUDAError(cudaGetLastError());
     if (cudaSuccess != cudaFreeHost(_hostMiIds))
         throw CUDAError(cudaGetLastError());
+
+    if (cudaSuccess != cudaFree(_devIds))
+        throw CUDAError(cudaGetLastError());
+
+    for (int i = 0; i < block_size; i++) {
+        _tables[i].finalize();
+    }
+    if (cudaSuccess != cudaFreeHost(_tables))
+        throw CUDAError(cudaGetLastError());
+
+    if (cudaSuccess != cudaFree(_devDoubleTables))
+        throw CUDAError(cudaGetLastError());
 }
 
-void EntropySearch::_findNHighestMI(uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
+void EntropySearch::_findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
                                     size_t num_outputs, MutualInfo *mutualInfo) {
     int iter = 0;
     MutualInfo *auxMI;
