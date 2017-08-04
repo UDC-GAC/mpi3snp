@@ -75,8 +75,10 @@ void Search::execute() {
         gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
         IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
+        MPI_Abort(MPI_COMM_WORLD, 1);
     } catch (const CUDAError &e) {
         IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 #else
     try {
@@ -84,6 +86,7 @@ void Search::execute() {
         cpu_engine.execute(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
         IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
+        MPI_Abort(MPI_COMM_WORLD, 1);
     }
 #endif
 
