@@ -2059,15 +2059,11 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
 
 EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
                              std::vector<std::vector<uint32_t> *> cases, std::vector<std::vector<uint32_t> *> ctrls) :
-        block_size(5000) {
-    _isMI = isMI;
-    _numSNPs = numSNPs;
-    _numCases = numCases;
-    _numCtrls = numCtrls;
-
-    _numEntriesCase = numCases / 32 + ((numCases % 32) > 0);
-    _numEntriesCtrl = numCtrls / 32 + ((numCtrls % 32) > 0);
-
+        block_size(5000),
+        _isMI(isMI),
+        _numSNPs(numSNPs),
+        _numEntriesCase(numCases / 32 + ((numCases % 32) > 0)),
+        _numEntriesCtrl(numCtrls / 32 + ((numCtrls % 32) > 0)) {
     if (cudaSuccess != cudaMallocHost(&_tables, block_size * sizeof(GPUDoubleContTable)))
         throw CUDAError(cudaGetLastError());
 
