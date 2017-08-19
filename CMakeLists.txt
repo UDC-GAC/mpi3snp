@@ -16,7 +16,7 @@ add_subdirectory(thirdparty/args)
 
 if (CUDA_FOUND AND NOT IGNORE_GPU)
     # GPU build
-    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11 -O3")
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_30 -std=c++11 -O3")
 
     set(MPI3SNP_USE_GPU ON)
     set(MPI3SNP_cuda_files src/gpu/EntropySearch.cu src/gpu/GPUEngine.cpp)
