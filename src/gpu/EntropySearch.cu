@@ -2151,7 +2151,7 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
                 sizeof(uint2) + sizeof(GPUDoubleContTable) + 9 * (_numEntriesCase + _numEntriesCtrl) * sizeof(uint32_t);
         // Per output memory usage
         const size_t po_memusage = num_outputs * (sizeof(float) + sizeof(uint3));
-        const size_t max_block_size = (size_t) round(free_mem * .85 / (pp_memusage + po_memusage));
+        const size_t max_block_size = (size_t) round(free_mem * .5 / (pp_memusage + po_memusage));
         block_size = max_block_size < pairs.size() ? max_block_size : pairs.size();
     } else {
         block_size = 5000;
