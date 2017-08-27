@@ -1,6 +1,18 @@
+#include <args.hxx>
 #include "Definitions.h"
 #include "IOMpi.h"
 #include "Search.h"
+
+std::istream& operator>>(std::istream& is, std::pair<unsigned int, unsigned int>& ints)
+{
+    is >> std::get<0>(ints);
+    is.get();
+    if (is.eof())
+        throw args::ParseError("Pair missing second value");
+    is >> std::get<1>(ints);
+    return is;
+}
+
 #include "args.hxx"
 
 Search *configure_search(int &argc, char **&argv) {
@@ -11,7 +23,8 @@ Search *configure_search(int &argc, char **&argv) {
     args::Positional<std::string> r_output(required, "output-file", "path to output file");
 #ifdef MPI3SNP_USE_GPU
     args::Group gpu_opt(parser, "GPU runtime configuration", args::Group::Validators::DontCare);
-    args::ValueFlagList<unsigned int> gpu_ids(gpu_opt, "gpu-ids", "list of GPU ids to use", {'g', "gpu-id"});
+    args::ValueFlagList<std::pair<unsigned int, unsigned int>>
+            gpu_map(gpu_opt, "gpu-ids", "list of process:GPU assignation", {'g', "gpu-id"});
 #else
     args::Group cpu_opt(parser, "CPU runtime configuration", args::Group::Validators::DontCare);
     args::ValueFlag<unsigned int> cpu_threads(cpu_opt, "thread-num", "number of threads to use per process",
@@ -60,8 +73,8 @@ Search *configure_search(int &argc, char **&argv) {
     Search::Builder builder = Search::Builder(args::get(r_tped), args::get(r_tfam), args::get(r_output));
 
 #ifdef MPI3SNP_USE_GPU
-    if (gpu_ids) {
-        builder.Set_gpu_ids(args::get(gpu_ids));
+    if (gpu_map) {
+        builder.Set_gpu_map(args::get(gpu_map));
     }
 #else
     if (cpu_threads) {
