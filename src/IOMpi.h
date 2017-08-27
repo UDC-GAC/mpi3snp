@@ -13,9 +13,7 @@
  * CLASS: IOMpi
  *
  * DESCRIPTION: Handles all the I/O throughout the program. Uses Meyers' Singleton pattern, which describes a thread-safe
- *  singleton initialization (C++11 or superior). The object destruction is handled at the end of the program; however,
- *  as MPI dependant resources need to be freed before calling MPI_Finalize, some attributes are destroyed with the call
- *  Deallocate_MPI_resources().
+ *  singleton initialization (C++11 or superior). The object destruction is handled at the end of the program.
  */
 
 class IOMpi {
@@ -43,66 +41,58 @@ public:
     IOMpi &operator=(IOMpi &&) = delete;      // Move assign
 
     template<Level l>
-    inline int Cprintf(const char *format, ...) {
-        int c = 0;
+    inline int print(const std::string &s) {
         if (l <= level) {
-            va_list list;
-            va_start(list, format);
-            c = Cfprintf_list(std::cout, format, list);
-            va_end(list);
+            sprint_nolr(std::cout, s);
         }
-        return c;
     }
 
     template<Level l>
-    inline int Cfprintf(std::ostream &ostream, const char *format, ...) {
-        int c = 0;
-        if (l <= level) {
-            va_list list;
-            va_start(list, format);
-            c = Cfprintf_list(ostream, format, list);
-            va_end(list);
+    inline int mprint(const std::string &s) {
+        if (l <= level && my_rank == io_rank) {
+            sprint_nolr(std::cout, s);
         }
-        return c;
     }
 
     template<Level l>
-    inline int Mprintf(const char *format, ...) {
-        int c = 0;
+    inline int cprint(const std::string &s) {
         if (l <= level) {
-            va_list list;
-            va_start(list, format);
-            c = Mfprintf_list(std::cout, format, list);
-            va_end(list);
+            scprint_nol(std::cout, s);
         }
-        return c;
     }
 
     template<Level l>
-    inline int Mfprintf(std::ostream &ostream, const char *format, ...) {
-        int c = 0;
+    inline void sprint(std::ostream &ostream, const std::string &s) {
         if (l <= level) {
-            va_list list;
-            va_start(list, format);
-            c = Mfprintf_list(ostream, format, list);
-            va_end(list);
+            sprint_nolr(ostream, s);
         }
-        return c;
+    }
+
+    template<Level l>
+    inline int smprint(std::ostream &ostream, const std::string &s) {
+        if (l <= level && my_rank == io_rank) {
+            sprint_nolr(ostream, s);
+        }
+    }
+
+    template<Level l>
+    inline void scprint(std::ostream &ostream, const std::string &s) {
+        if (l <= level) {
+            scprint_nol(ostream, s);
+        }
     }
 
 protected:
-    /* Methods */
     IOMpi();
 
     ~IOMpi();
 
     int Get_io_rank();
 
-    int Cfprintf_list(std::ostream &ostream, const char *format, va_list &list);
+    void scprint_nol(std::ostream &ostream, const std::string &s);
 
-    int Mfprintf_list(std::ostream &ostream, const char *format, va_list &list);
+    void sprint_nolr(std::ostream &ostream, const std::string &s);
 
-    /* Attributes */
     static const int DEFAULT_IO_PROC = 0;
 
     void * void_io_comm;

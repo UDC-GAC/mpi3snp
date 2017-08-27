@@ -57,8 +57,8 @@ int IOMpi::Get_io_rank() {
 }
 
 
-int IOMpi::Cfprintf_list(std::ostream &ostream, const char *format, va_list &list){
-    int tag, charcount = 0;
+void IOMpi::scprint_nol(std::ostream &ostream, const std::string &s){
+    int tag;
 
     pthread_mutex_lock(&cprintf_mutex);
     tag = cprintf_tag++;
@@ -70,46 +70,28 @@ int IOMpi::Cfprintf_list(std::ostream &ostream, const char *format, va_list &lis
         int count;
         for (int i = 0; i < comm_size; i++) {
             if (i == my_rank) {
-                const int str_size = snprintf(nullptr, 0, format, list);
-                char str[str_size + 1];
-                vsprintf(str, format, list);
-                ostream << "Process " + std::to_string(my_rank) + " > " << str;
-                charcount += str_size;
+                ostream << "Process " + std::to_string(my_rank) + " > " << s;
             } else {
                 if (MPI_Mprobe(i, tag, io_comm, &message, &status) != MPI_SUCCESS) {
-                    return -1;
+                    return;
                 }
                 MPI_Get_count(&status, MPI_CHAR, &count);
                 char str[count];
-                if (MPI_Mrecv(str, count, MPI_CHAR, &message, NULL) != MPI_SUCCESS) {
-                    return -1;
+                if (MPI_Mrecv(str, count, MPI_CHAR, &message, nullptr) != MPI_SUCCESS) {
+                    return;
                 }
                 ostream << "Process " + std::to_string(i) + " > " << str;
-                charcount += count;
             }
         }
         std::flush(ostream);
     } else {
-        const int str_size = snprintf(nullptr, 0, format, list);
-        char str[str_size + 1];
-        vsprintf(str, format, list);
-        if (MPI_Send(str, str_size + 1, MPI_CHAR, io_rank, tag, io_comm) != MPI_SUCCESS) {
-            return -1;
+        if (MPI_Send(s.c_str(), s.length() + 1, MPI_CHAR, io_rank, tag, io_comm) != MPI_SUCCESS) {
+            return;
         }
-        charcount = str_size;
     }
-    return charcount;
 }
 
-int IOMpi::Mfprintf_list(std::ostream &ostream, const char *format, va_list &list) {
-    if (my_rank != io_rank) {
-        return 0;
-    }
-
-    const int str_size = snprintf(nullptr, 0, format, list);
-    char str[str_size + 1];
-    vsprintf(str, format, list);
-    ostream << str;
+void IOMpi::sprint_nolr(std::ostream &ostream, const std::string &s) {
+    ostream << s;
     std::flush(ostream);
-    return str_size;
 }
