@@ -26,7 +26,7 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi) :
     cudaDeviceProp gpu_prop;
 
     IOMpi::Instance().mprint<IOMpi::D>("Available GPUs:\n");
-    for (int gid = 0; gid < avail_gpus; gid++){
+    for (int gid = 0; gid < avail_gpus; gid++) {
         if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gid))
             throw CUDAError(cudaGetLastError());
         IOMpi::Instance().mprint<IOMpi::D>("GPU " + std::to_string(gid) + ": " + gpu_prop.name + "\n");
@@ -42,6 +42,9 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi) :
     }
     if (cudaSuccess != cudaSetDevice(gpu_id))
         throw CUDAError(cudaGetLastError());
+
+    IOMpi::Instance().print<IOMpi::D>("Process " + std::to_string(proc_id) +
+                                      " using GPU " + std::to_string(gpu_id) + "\n");
 }
 
 void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
@@ -63,7 +66,7 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
 
     int myTotalAnal = 0;
     const unsigned int num_snps = dataset.Get_SNP_count();
-    for (auto p : pairs){
+    for (auto p : pairs) {
         myTotalAnal += num_snps - p.second - 1;
     }
     statistics.Add_value("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
