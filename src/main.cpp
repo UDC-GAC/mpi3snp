@@ -24,7 +24,7 @@ Search *configure_search(int &argc, char **&argv) {
 #ifdef MPI3SNP_USE_GPU
     args::Group gpu_opt(parser, "GPU runtime configuration", args::Group::Validators::DontCare);
     args::ValueFlagList<std::pair<unsigned int, unsigned int>>
-            gpu_map(gpu_opt, "gpu-ids", "list of process:GPU assignation", {'g', "gpu-id"});
+            gpu_map(gpu_opt, "pid:gid", "list of process to GPU assignation", {'g', "gpu-id"});
 #else
     args::Group cpu_opt(parser, "CPU runtime configuration", args::Group::Validators::DontCare);
     args::ValueFlag<unsigned int> cpu_threads(cpu_opt, "thread-num", "number of threads to use per process",
