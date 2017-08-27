@@ -3,18 +3,29 @@
 //
 
 #include "IOMpi.h"
+#include <mpi.h>
+
+// Macro to cast void_io_comm attribute from type void * into MPI_Comm type for better readability
+#ifndef io_comm
+#define io_comm *(MPI_Comm *) void_io_comm
+#endif
 
 IOMpi::IOMpi() {
+    void_io_comm = new MPI_Comm;
     MPI_Comm_dup(MPI_COMM_WORLD, &io_comm);
     MPI_Comm_size(io_comm, &comm_size);
     MPI_Comm_rank(io_comm, &my_rank);
     io_rank = Get_io_rank();
     cprintf_tag = 0;
-    pthread_mutex_init(&cprintf_mutex, NULL);
+    pthread_mutex_init(&cprintf_mutex, nullptr);
     level = N;
 }
 
 IOMpi::~IOMpi() {
+    int finalized;
+    MPI_Finalized(&finalized);
+    if (!finalized)
+        MPI_Comm_free((MPI_Comm *) io_comm);
     pthread_mutex_destroy(&cprintf_mutex);
 }
 

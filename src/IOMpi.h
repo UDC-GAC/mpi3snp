@@ -5,7 +5,9 @@
 #ifndef MPI3SNP_IOMpi_H
 #define MPI3SNP_IOMpi_H
 
-#include <mpi.h>
+#include <cstdarg>
+#include <iostream>
+#include <pthread.h>
 
 /*
  * CLASS: IOMpi
@@ -32,10 +34,6 @@ public:
 
     static void Set_print_level(Level l) {
         Instance().level = l;
-    }
-
-    static void Deallocate_MPI_resources() {
-        MPI_Comm_free(&IOMpi::Instance().io_comm);
     }
 
     // delete copy and move constructors and assign operators
@@ -107,12 +105,11 @@ protected:
     /* Attributes */
     static const int DEFAULT_IO_PROC = 0;
 
-    MPI_Comm io_comm;
+    void * void_io_comm;
     int io_rank, my_rank, comm_size;
     int cprintf_tag;
     pthread_mutex_t cprintf_mutex;
     Level level;
 };
-
 
 #endif //MPI3SNP_IOMpi_H
