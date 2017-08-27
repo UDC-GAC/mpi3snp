@@ -24,14 +24,14 @@ CPUEngine::~CPUEngine() {
 
 void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vector<MutualInfo> &mutual_info,
                         uint16_t num_outputs, Statistics &statistics) {
-    statistics.Begin_timer("SNPs load time");
+    statistics.Begin_timer("SNPs read time");
     Dataset dataset(tped_file, tfam_file, Dataset::Regular);
-    statistics.End_timer("SNPs load time");
+    statistics.End_timer("SNPs read time");
 
     Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count());
-    statistics.Add_value("SNPs", dataset.Get_SNP_count());
-    statistics.Add_value("Cases", dataset.Get_case_count());
-    statistics.Add_value("Controls", dataset.Get_ctrl_count());
+    statistics.Add_value("SNP count", dataset.Get_SNP_count());
+    statistics.Add_value("Number of cases", dataset.Get_case_count());
+    statistics.Add_value("Number of controls", dataset.Get_ctrl_count());
 
     std::vector<pthread_t> threadIDs(num_threads, 0);
 
@@ -91,7 +91,7 @@ void *CPUEngine::threadMI(void *arg) {
     std::string timer_label;
     timer_label += "Thread " + std::to_string(params->tid) + " runtime";
     std::string analysis_label;
-    analysis_label += "Thread " + std::to_string(params->tid) + " analysis";
+    analysis_label += "Thread " + std::to_string(params->tid) + " computations";
 
     params->statistics.Begin_timer(timer_label);
 
@@ -103,6 +103,6 @@ void *CPUEngine::threadMI(void *arg) {
     memcpy(params->mutualInfo, mutualInfo, params->numOutputs * sizeof(MutualInfo));
 
     delete[] mutualInfo;
-    return NULL;
+    return nullptr;
 }
 

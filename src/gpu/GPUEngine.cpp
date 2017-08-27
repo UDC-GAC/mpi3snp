@@ -37,22 +37,17 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi) :
 
 void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
                     Statistics &statistics) {
-    std::string snp_load_label("SNPs load time");
-    statistics.Begin_timer(snp_load_label);
+    statistics.Begin_timer("SNPs read time");
     Dataset dataset(tped, tfam, Dataset::Transposed);
-    statistics.End_timer(snp_load_label);
+    statistics.End_timer("SNPs read time");
+    statistics.Add_value("SNP count", dataset.Get_SNP_count());
+    statistics.Add_value("Number of cases", dataset.Get_case_count());
+    statistics.Add_value("Number of controls", dataset.Get_ctrl_count());
 
     Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count());
 
     EntropySearch search(use_mi, dataset.Get_SNP_count(), dataset.Get_case_count(), dataset.Get_ctrl_count(),
                          dataset.Get_cases(), dataset.Get_ctrls());
-
-    std::string timer_label;
-    timer_label += "GPU " + std::to_string(gpu_id) + " runtime";
-    std::string analysis_label;
-    analysis_label += "GPU " + std::to_string(gpu_id) + " analysis";
-
-    statistics.Begin_timer(timer_label);
 
     std::vector<std::pair<uint32_t, uint32_t >> pairs;
     distributor.Get_pairs(1, 0, pairs);
@@ -62,11 +57,15 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     for (auto p : pairs){
         myTotalAnal += num_snps - p.second - 1;
     }
+    statistics.Add_value("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
+
+    std::string timer_label;
+    timer_label += "GPU " + std::to_string(gpu_id) + " runtime";
+    statistics.Begin_timer(timer_label);
 
     mutual_info.resize(num_outputs);
     search.mutualInfo(pairs, num_outputs, &mutual_info.at(0));
     cudaDeviceSynchronize();
 
     statistics.End_timer(timer_label);
-    statistics.Add_value(analysis_label, myTotalAnal);
 }
