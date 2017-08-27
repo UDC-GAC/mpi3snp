@@ -31,23 +31,23 @@ Search *configure_search(int &argc, char **&argv) {
         parser.ParseCLI(argc, argv);
     }
     catch (args::Help) {
-        IOMpi::Instance().Mprintf<IOMpi::N>(parser.Help().c_str());
+        IOMpi::Instance().mprint<IOMpi::N>(parser.Help());
         return nullptr;
     }
     catch (args::Version) {
-        IOMpi::Instance().Mprintf<IOMpi::N>((std::string(MPI3SNP_NAME) + " " + MPI3SNP_VERSION + "\n").c_str());
-        IOMpi::Instance().Mprintf<IOMpi::N>((std::string(MPI3SNP_LICENSE) + "\n").c_str());
-        IOMpi::Instance().Mprintf<IOMpi::N>((std::string("\n") + MPI3SNP_AUTHOR).c_str());
+        IOMpi::Instance().mprint<IOMpi::N>(std::string(MPI3SNP_NAME) + " " + MPI3SNP_VERSION + "\n");
+        IOMpi::Instance().mprint<IOMpi::N>(std::string(MPI3SNP_LICENSE) + "\n");
+        IOMpi::Instance().mprint<IOMpi::N>(std::string("\n") + MPI3SNP_AUTHOR);
         return nullptr;
     }
-    catch (args::ParseError e) {
-        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, e.what());
-        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, parser.Help().c_str());
+    catch (const args::ParseError &e) {
+        IOMpi::Instance().smprint<IOMpi::N>(std::cerr, e.what());
+        IOMpi::Instance().smprint<IOMpi::N>(std::cerr, parser.Help());
         return nullptr;
     }
-    catch (args::ValidationError e) {
-        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, e.what());
-        IOMpi::Instance().Mfprintf<IOMpi::N>(std::cerr, parser.Help().c_str());
+    catch (const args::ValidationError &e) {
+        IOMpi::Instance().smprint<IOMpi::N>(std::cerr, e.what());
+        IOMpi::Instance().smprint<IOMpi::N>(std::cerr, parser.Help());
         return nullptr;
     }
 
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
     search->execute();
 
     etime = MPI_Wtime();
-    IOMpi::Instance().Mprintf<IOMpi::B>("Overall time: %.2f seconds\n", etime - stime);
+    IOMpi::Instance().mprint<IOMpi::B>("Overall time: " + std::to_string(etime - stime) + " seconds\n");
 
     delete search;
 

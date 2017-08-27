@@ -8,6 +8,7 @@
 #include "GPUEngine.h"
 #include "../Dataset.h"
 #include "../Distributor.h"
+#include "../IOMpi.h"
 #include "EntropySearch.h"
 #include <cstring>
 
@@ -22,8 +23,16 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi) :
         throw CUDAError("Could not find any CUDA-enabled GPU");
     }
 
-    gpu_id = proc_id % avail_gpus;
     cudaDeviceProp gpu_prop;
+
+    IOMpi::Instance().mprint<IOMpi::D>("Available GPUs:\n");
+    for (int gid = 0; gid < avail_gpus; gid++){
+        if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gid))
+            throw CUDAError(cudaGetLastError());
+        IOMpi::Instance().mprint<IOMpi::D>("GPU " + std::to_string(gid) + ": " + gpu_prop.name + "\n");
+    }
+
+    gpu_id = proc_id % avail_gpus;
     if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gpu_id))
         throw CUDAError(cudaGetLastError());
     if (gpu_prop.major < 2 || !gpu_prop.canMapHostMemory) {

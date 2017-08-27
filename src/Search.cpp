@@ -74,10 +74,10 @@ void Search::execute() {
         GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, use_mi);
         gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
-        IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
+        IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
     } catch (const CUDAError &e) {
-        IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
+        IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 #else
@@ -85,7 +85,7 @@ void Search::execute() {
         CPUEngine cpu_engine(num_proc, proc_id, cpu_threads, use_mi);
         cpu_engine.execute(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
-        IOMpi::Instance().Mfprintf<IOMpi::E>(std::cerr, (std::string(e.what()) + "\n").c_str());
+        IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
 #endif
@@ -110,7 +110,7 @@ void Search::execute() {
         of.close();
     }
 
-    IOMpi::Instance().Cprintf<IOMpi::D>("3-SNP analysis finalized\n");
+    IOMpi::Instance().cprint<IOMpi::D>("3-SNP analysis finalized\n");
     // Print runtime statistics to stdout
-    IOMpi::Instance().Cprintf<IOMpi::B>(statistics.To_string().c_str());
+    IOMpi::Instance().cprint<IOMpi::B>(statistics.To_string());
 }
