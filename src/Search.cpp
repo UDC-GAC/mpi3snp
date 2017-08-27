@@ -21,7 +21,6 @@
 
 #include <fstream>
 #include <thread>
-#include "Statistics.h"
 #include "IOMpi.h"
 #include "Dataset.h"
 
@@ -39,8 +38,8 @@ Search::Builder &Search::Builder::Set_num_outputs(unsigned int num_outputs) {
     return *this;
 }
 
-Search::Builder &Search::Builder::Set_gpu_ids(std::vector<unsigned int> gpu_ids) {
-    search_obj->gpu_ids = gpu_ids;
+Search::Builder &Search::Builder::Set_gpu_map(std::vector<std::pair<unsigned int, unsigned int>> gpu_map) {
+    search_obj->gpu_map = gpu_map;
     return *this;
 }
 
@@ -71,7 +70,7 @@ void Search::execute() {
 
 #ifdef MPI3SNP_USE_GPU
     try {
-        GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, use_mi);
+        GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, gpu_map, use_mi);
         gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
         IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
@@ -94,7 +93,7 @@ void Search::execute() {
     if (proc_id == 0) {
         result.resize(num_outputs * num_proc);
     }
-    
+
     MPI_Gather(&mutual_info.front(), num_outputs * sizeof(MutualInfo), MPI_BYTE,
                &result.front(), num_outputs * sizeof(MutualInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
 

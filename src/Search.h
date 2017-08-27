@@ -19,7 +19,7 @@ public:
 
         Builder &Set_num_outputs(unsigned int num_outputs);
 
-        Builder &Set_gpu_ids(std::vector<unsigned int> gpu_ids);
+        Builder &Set_gpu_map(std::vector<std::pair<unsigned int, unsigned int>> gpu_map);
 
         Builder &Set_cpu_threads(unsigned int threads);
 
@@ -39,7 +39,7 @@ private:
 
     std::string tped_file, tfam_file, out_file;
     unsigned int num_outputs;
-    std::vector<unsigned int> gpu_ids;
+    std::vector<std::pair<unsigned int, unsigned int>> gpu_map;
     unsigned int cpu_threads;
     bool use_mi;
 };
