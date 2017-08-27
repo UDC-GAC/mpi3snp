@@ -13,7 +13,8 @@
 
 class GPUEngine {
 public:
-    GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi);
+    GPUEngine(unsigned int proc_num, unsigned int proc_id, std::vector<std::pair<unsigned int, unsigned int>> gpu_map,
+              bool use_mi);
 
     void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
              Statistics &statistics);

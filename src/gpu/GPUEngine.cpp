@@ -12,7 +12,8 @@
 #include "EntropySearch.h"
 #include <cstring>
 
-GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi) :
+GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
+                     std::vector<std::pair<unsigned int, unsigned int>> gpu_map, bool use_mi) :
         proc_num(proc_num),
         proc_id(proc_id),
         use_mi(use_mi) {
@@ -32,7 +33,12 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi) :
         IOMpi::Instance().mprint<IOMpi::D>("GPU " + std::to_string(gid) + ": " + gpu_prop.name + "\n");
     }
 
-    gpu_id = proc_id % avail_gpus;
+    auto pos = std::find_if(gpu_map.begin(), gpu_map.end(),
+                 [&proc_id](std::pair<unsigned int, unsigned int> item) { return item.first == proc_id; });
+    gpu_id = pos == gpu_map.end() ? proc_id % avail_gpus : pos->second;
+    IOMpi::Instance().print<IOMpi::D>("Process " + std::to_string(proc_id) +
+                                      " using GPU " + std::to_string(gpu_id) + "\n");
+
     if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gpu_id))
         throw CUDAError(cudaGetLastError());
     if (gpu_prop.major < 2 || !gpu_prop.canMapHostMemory) {
@@ -42,9 +48,6 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id, bool use_mi) :
     }
     if (cudaSuccess != cudaSetDevice(gpu_id))
         throw CUDAError(cudaGetLastError());
-
-    IOMpi::Instance().print<IOMpi::D>("Process " + std::to_string(proc_id) +
-                                      " using GPU " + std::to_string(gpu_id) + "\n");
 }
 
 void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
