@@ -88,7 +88,6 @@ int main(int argc, char **argv) {
 
     Search *search = configure_search(argc, argv);
     if (search == nullptr) {
-        IOMpi::Instance().Deallocate_MPI_resources();
         MPI_Finalize();
         return 0;
     }
@@ -99,7 +98,6 @@ int main(int argc, char **argv) {
 
     delete search;
 
-    IOMpi::Instance().Deallocate_MPI_resources();
     MPI_Finalize();
     return 0;
 }
