@@ -42,14 +42,10 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
         distributor.Get_pairs(num_threads, tid, params[tid]->pairs);
 
         // Create thread entities that call to the functions below
-        if (pthread_create(&threadIDs[tid], NULL, threadMI, params[tid]) != 0) {
+        if (pthread_create(&threadIDs[tid], nullptr, threadMI, params[tid]) != 0) {
             for (int i = 0; i < tid; i++)
                 pthread_cancel(threadIDs[i]);
-            char message[80];
-            sprintf(message, "error while creating the thread %i in process %i", tid, proc_id);
-            //throw ThreadError(message);
-            printf("Error al crear hilos\n");
-            return;
+            throw ThreadError("Error creating thread number " + std::to_string(tid));
         }
     }
 
@@ -57,7 +53,7 @@ void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vecto
 
     // Wait for the completion of all threads
     for (int tid = 0; tid < num_threads; tid++) {
-        pthread_join(threadIDs[tid], NULL);
+        pthread_join(threadIDs[tid], nullptr);
         memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->mutualInfo, num_outputs * sizeof(MutualInfo));
         delete params[tid];
     }
@@ -87,7 +83,7 @@ void *CPUEngine::threadMI(void *arg) {
     // Number of entries of the array full
     uint16_t numEntriesWithMI = 0;
 
-    uint64_t myTotalAnal = 0;
+    int myTotalAnal = 0;
     std::string timer_label;
     timer_label += "Thread " + std::to_string(params->tid) + " runtime";
     std::string analysis_label;
