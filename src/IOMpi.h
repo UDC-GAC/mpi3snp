@@ -41,21 +41,21 @@ public:
     IOMpi &operator=(IOMpi &&) = delete;      // Move assign
 
     template<Level l>
-    inline int print(const std::string &s) {
+    inline void print(const std::string &s) {
         if (l <= level) {
             sprint_nolr(std::cout, s);
         }
     }
 
     template<Level l>
-    inline int mprint(const std::string &s) {
+    inline void mprint(const std::string &s) {
         if (l <= level && my_rank == io_rank) {
             sprint_nolr(std::cout, s);
         }
     }
 
     template<Level l>
-    inline int cprint(const std::string &s) {
+    inline void cprint(const std::string &s) {
         if (l <= level) {
             scprint_nol(std::cout, s);
         }
@@ -69,7 +69,7 @@ public:
     }
 
     template<Level l>
-    inline int smprint(std::ostream &ostream, const std::string &s) {
+    inline void smprint(std::ostream &ostream, const std::string &s) {
         if (l <= level && my_rank == io_rank) {
             sprint_nolr(ostream, s);
         }
