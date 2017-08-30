@@ -3,6 +3,7 @@
 //
 
 #include "Distributor.h"
+#include <cstdlib>
 
 Distributor::Distributor(unsigned int p_num, unsigned int p_id, unsigned long count) :
         count(count) {
@@ -10,14 +11,14 @@ Distributor::Distributor(unsigned int p_num, unsigned int p_id, unsigned long co
     distribution.resize(dist_size);
     distribution[0] = p_id;
     distribution[1] = 2 * p_num - p_id - 1;
-    for (int i = 2; i < dist_size; i++) {
+    for (unsigned int i = 2; i < dist_size; i++) {
         distribution[i] = distribution[i - 2] + 2 * p_num;
     }
 }
 
 void Distributor::Get_pairs(unsigned int t_num, unsigned int t_id,
                                      std::vector<std::pair<uint32_t, uint32_t>> &values) {
-    for (long i = t_id; i < distribution.size(); i += t_num) {
+    for (size_t i = t_id; i < distribution.size(); i += t_num) {
         for (uint32_t j = distribution[i] + 1; j < count - 1; j++) {
             values.push_back(std::make_pair(distribution[i], j));
         }
