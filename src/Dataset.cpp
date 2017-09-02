@@ -68,8 +68,8 @@ void Dataset::Regular_representation(std::vector<Individual> &inds, std::vector<
     std::vector<uint32_t> *cases_vec = nullptr;
     std::vector<uint32_t> *ctrls_vec = nullptr;
     uint32_t cases_buff[3], ctrls_buff[3];
-    unsigned int n_cases_buff, n_ctrls_buff;
-    int i, j;
+    unsigned int n_cases_buff = 0, n_ctrls_buff = 0;
+    size_t i, j;
 
     for (SNP s : snps) {
         // Initialize buffers
@@ -130,7 +130,7 @@ void Dataset::Transposed_representation(std::vector<Individual> &inds, std::vect
     std::vector<unsigned long> scases(32), sctrls(32);
     unsigned long ctrlpos = 0, casepos = 0;
     uint32_t cases_buffer[3], ctrls_buffer[3];
-    int i, j;
+    size_t i, j;
 
     std::vector<uint32_t> *t_cases = new std::vector<uint32_t>[3];
     std::vector<uint32_t> *t_ctrls = new std::vector<uint32_t>[3];
