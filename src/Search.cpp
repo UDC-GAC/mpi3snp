@@ -103,7 +103,7 @@ void Search::execute() {
 
         // Write results to the output file
         std::ofstream of(out_file.c_str(), std::ios::out);
-        for (int i = 0; i < num_outputs; i++) {
+        for (unsigned int i = 0; i < num_outputs; i++) {
             of << result[i].To_string() << '\n';
         }
         of.close();
