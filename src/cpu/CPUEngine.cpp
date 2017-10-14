@@ -18,14 +18,10 @@ CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
     this->use_mi = use_mi;
 }
 
-CPUEngine::~CPUEngine() {
-
-}
-
-void CPUEngine::execute(std::string tped_file, std::string tfam_file, std::vector<MutualInfo> &mutual_info,
-                        uint16_t num_outputs, Statistics &statistics) {
+void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
+                    Statistics &statistics) {
     statistics.Begin_timer("SNPs read time");
-    Dataset dataset(tped_file, tfam_file, Dataset::Regular);
+    Dataset dataset(tped, tfam, Dataset::Regular);
     statistics.End_timer("SNPs read time");
 
     Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count());

@@ -8,22 +8,19 @@
 #ifndef ENGINE_H_
 #define ENGINE_H_
 
-#include "../MutualInfo.h"
-#include "ContTable.h"
-#include "../Statistics.h"
+#include "../Engine.h"
 
-class CPUEngine {
+class CPUEngine : public Engine {
 public:
     CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi);
 
-    virtual ~CPUEngine();
+    virtual ~CPUEngine() = default;
 
-    void execute(std::string tped_file, std::string tfam_file, std::vector<MutualInfo> &mutual_info,
-                 uint16_t num_outputs, Statistics &statistics);
+    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
+                  Statistics &statistics) override;
 
 private:
-
-    static void *threadMI(void * arg);
+    static void *threadMI(void *arg);
 
     int num_proc;
     int proc_id;
