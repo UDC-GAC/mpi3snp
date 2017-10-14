@@ -6,6 +6,9 @@
  */
 
 #include "Search.h"
+#include <fstream>
+#include "IOMpi.h"
+#include "Dataset.h"
 #include "Definitions.h"
 
 #ifdef MPI3SNP_USE_GPU
@@ -19,75 +22,33 @@
 
 #endif
 
-#include <fstream>
-#include <thread>
-#include "IOMpi.h"
-#include "Dataset.h"
+Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments) {
+    auto *search = new Search();
+    MPI_Comm_rank(MPI_COMM_WORLD, &search->proc_id);
+    MPI_Comm_size(MPI_COMM_WORLD, &search->num_proc);
+    search->tped_file = arguments.tped;
+    search->tfam_file = arguments.tfam;
+    search->out_file = arguments.output;
+    search->num_outputs = arguments.output_num;
 
-Search::Builder::Builder(std::string tped_file, std::string tfam_file, std::string out_file) {
-    search_obj = new Search();
-    search_obj->tped_file = tped_file;
-    search_obj->tfam_file = tfam_file;
-    search_obj->out_file = out_file;
-    search_obj->num_outputs = 10;
-    search_obj->use_mi = true;
+#ifdef MPI3SNP_USE_GPU
+    search->engine = new GPUEngine(search->num_proc, search->proc_id, arguments.gpu_map, arguments.use_mi);
+#else
+    search->engine = new CPUEngine(search->num_proc, search->proc_id, arguments.cpu_threads, arguments.use_mi);
+#endif
+    return search;
 }
-
-Search::Builder &Search::Builder::Set_num_outputs(unsigned int num_outputs) {
-    search_obj->num_outputs = num_outputs;
-    return *this;
-}
-
-Search::Builder &Search::Builder::Set_gpu_map(std::vector<std::pair<unsigned int, unsigned int>> gpu_map) {
-    search_obj->gpu_map = gpu_map;
-    return *this;
-}
-
-Search::Builder &Search::Builder::Set_cpu_threads(unsigned int threads) {
-    search_obj->cpu_threads = threads;
-    return *this;
-}
-
-Search::Builder &Search::Builder::Set_use_mi(bool use_mi) {
-    search_obj->use_mi = use_mi;
-    return *this;
-}
-
-Search *Search::Builder::Create_object() {
-    return search_obj;
-}
-
-Search::Search() :
-        cpu_threads(std::thread::hardware_concurrency()) {}
 
 void Search::execute() {
-    int proc_id, num_proc;
-    MPI_Comm_rank(MPI_COMM_WORLD, &proc_id);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
-
     std::vector<MutualInfo> mutual_info, result;
     Statistics statistics;
 
-#ifdef MPI3SNP_USE_GPU
     try {
-        GPUEngine gpu_engine((unsigned int) num_proc, (unsigned int) proc_id, gpu_map, use_mi);
-        gpu_engine.run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
-    } catch (const Dataset::ReadError &e) {
-        IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
-        MPI_Abort(MPI_COMM_WORLD, 1);
-    } catch (const CUDAError &e) {
-        IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
-        MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-#else
-    try {
-        CPUEngine cpu_engine(num_proc, proc_id, cpu_threads, use_mi);
-        cpu_engine.execute(tped_file, tfam_file, mutual_info, num_outputs, statistics);
+        engine->run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
     } catch (const Dataset::ReadError &e) {
         IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
     }
-#endif
 
     // Gather the results on the master process
     if (proc_id == 0) {
