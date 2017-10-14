@@ -9,7 +9,13 @@ int main(int argc, char **argv) {
     /*get the startup time*/
     stime = MPI_Wtime();
 
-    Arg_parser::Arguments arguments = Arg_parser(argc, argv).get_arguments();
+    Arg_parser::Arguments arguments;
+    try {
+        arguments = Arg_parser(argc, argv).get_arguments();
+    } catch (const Arg_parser::Finalize &finalize) {
+        MPI_Finalize();
+        return 0;
+    }
 
     // Set adequate information printing level
     if (arguments.benchmarking) {
@@ -20,8 +26,6 @@ int main(int argc, char **argv) {
 
     Search *search = Search::Builder::build_from_args(arguments);
     if (search == nullptr) {
-
-        std::cout << "pasa por aqui" << std::endl;
         MPI_Finalize();
         return 0;
     }
