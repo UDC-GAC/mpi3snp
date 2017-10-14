@@ -20,7 +20,7 @@ if (CUDA_FOUND AND NOT IGNORE_GPU)
 
     set(MPI3SNP_USE_GPU ON)
     set(MPI3SNP_cuda_files src/gpu/EntropySearch.cu src/gpu/GPUEngine.cpp)
-    set(MPI3SNP_c++_files src/main.cpp src/Distributor.cpp src/Dataset.cpp src/Search.cpp src/IOMpi.cpp src/Statistics.cpp)
+    set(MPI3SNP_c++_files src/main.cpp src/Arg_parser.cpp src/Distributor.cpp src/Dataset.cpp src/Search.cpp src/IOMpi.cpp src/Statistics.cpp)
 
     configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/src/Definitions.h)
     include_directories(${MPI_CXX_INCLUDE_PATH} ${ARGS_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src/)
@@ -29,7 +29,7 @@ if (CUDA_FOUND AND NOT IGNORE_GPU)
     target_link_libraries(MPI3SNP ${MPI_CXX_LIBRARIES})
 else (CUDA_FOUND AND NOT IGNORE_GPU)
     # CPU build
-    set(SOURCE_FILES src/main.cpp src/Distributor.cpp src/Dataset.cpp src/Search.cpp src/IOMpi.cpp src/Statistics.cpp
+    set(SOURCE_FILES src/main.cpp src/Arg_parser.cpp src/Distributor.cpp src/Dataset.cpp src/Search.cpp src/IOMpi.cpp src/Statistics.cpp
             src/cpu/CPUEngine.cpp src/cpu/EntropySearch.cpp)
 
     configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/src/Definitions.h)
