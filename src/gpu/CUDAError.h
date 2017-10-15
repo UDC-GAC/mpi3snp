@@ -6,15 +6,17 @@
 #define MPI3SNP_CUDAERROR_H
 
 #include <cuda_runtime.h>
-#include <stdexcept>
+#include "../Engine.h"
 
-class CUDAError : public std::runtime_error {
+class CUDAError : public Engine::Error {
 public:
     CUDAError(const std::string &message) :
-            std::runtime_error(message) {};
+            Engine::Error(message) {};
 
     CUDAError(const cudaError_t &code) :
-            std::runtime_error(std::string(cudaGetErrorName(code)) + ": " + cudaGetErrorString(code)) {};
+            Engine::Error(std::string(cudaGetErrorName(code)) + ": " + cudaGetErrorString(code)) {};
+
+    ~CUDAError() override = default;
 };
 
 #endif //MPI3SNP_CUDAERROR_H
