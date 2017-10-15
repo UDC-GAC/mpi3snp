@@ -53,22 +53,28 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
 void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
                     Statistics &statistics) {
     statistics.Begin_timer("SNPs read time");
-    Dataset dataset(tped, tfam, Dataset::Transposed);
+    Dataset *dataset;
+    try {
+        dataset = new Dataset(tped, tfam, Dataset::Transposed);
+    } catch (const Dataset::ReadError &error) {
+        throw Engine::Error(error.what());
+    }
     statistics.End_timer("SNPs read time");
-    statistics.Add_value("SNP count", dataset.Get_SNP_count());
-    statistics.Add_value("Number of cases", dataset.Get_case_count());
-    statistics.Add_value("Number of controls", dataset.Get_ctrl_count());
 
-    Distributor distributor(proc_num, proc_id, dataset.Get_SNP_count());
+    statistics.Add_value("SNP count", dataset->Get_SNP_count());
+    statistics.Add_value("Number of cases", dataset->Get_case_count());
+    statistics.Add_value("Number of controls", dataset->Get_ctrl_count());
 
-    EntropySearch search(use_mi, dataset.Get_SNP_count(), dataset.Get_case_count(), dataset.Get_ctrl_count(),
-                         dataset.Get_cases(), dataset.Get_ctrls());
+    Distributor distributor(proc_num, proc_id, dataset->Get_SNP_count());
+
+    EntropySearch search(use_mi, dataset->Get_SNP_count(), dataset->Get_case_count(), dataset->Get_ctrl_count(),
+                         dataset->Get_cases(), dataset->Get_ctrls());
 
     std::vector<std::pair<uint32_t, uint32_t >> pairs;
     distributor.Get_pairs(1, 0, pairs);
 
     int myTotalAnal = 0;
-    const unsigned int num_snps = dataset.Get_SNP_count();
+    const unsigned int num_snps = dataset->Get_SNP_count();
     for (auto p : pairs) {
         myTotalAnal += num_snps - p.second - 1;
     }
@@ -81,6 +87,8 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     mutual_info.resize(num_outputs);
     search.mutualInfo(pairs, num_outputs, &mutual_info.at(0));
     cudaDeviceSynchronize();
+
+    delete dataset;
 
     statistics.End_timer(timer_label);
 }

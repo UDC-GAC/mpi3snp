@@ -21,20 +21,25 @@ CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
 void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
                     Statistics &statistics) {
     statistics.Begin_timer("SNPs read time");
-    Dataset dataset(tped, tfam, Dataset::Regular);
+    Dataset *dataset;
+    try {
+        dataset = new Dataset(tped, tfam, Dataset::Regular);
+    } catch (const Dataset::ReadError &error) {
+        throw Engine::Error(error.what());
+    }
     statistics.End_timer("SNPs read time");
 
-    Distributor distributor(num_proc, proc_id, dataset.Get_SNP_count());
-    statistics.Add_value("SNP count", dataset.Get_SNP_count());
-    statistics.Add_value("Number of cases", dataset.Get_case_count());
-    statistics.Add_value("Number of controls", dataset.Get_ctrl_count());
+    Distributor distributor(num_proc, proc_id, dataset->Get_SNP_count());
+    statistics.Add_value("SNP count", dataset->Get_SNP_count());
+    statistics.Add_value("Number of cases", dataset->Get_case_count());
+    statistics.Add_value("Number of controls", dataset->Get_ctrl_count());
 
     std::vector<pthread_t> threadIDs(num_threads, 0);
 
     // Computation of the single-SNP entropy
     std::vector<ThreadParams *> params(num_threads);
     for (int tid = 0; tid < num_threads; tid++) {
-        params[tid] = new ThreadParams(tid, dataset, num_outputs, statistics);
+        params[tid] = new ThreadParams(tid, *dataset, num_outputs, statistics);
         distributor.Get_pairs(num_threads, tid, params[tid]->pairs);
 
         // Create thread entities that call to the functions below
@@ -45,7 +50,7 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
         }
     }
 
-    MutualInfo *auxMutualInfo = new MutualInfo[num_threads * num_outputs];
+    MutualInfo auxMutualInfo[num_threads * num_outputs];
 
     // Wait for the completion of all threads
     for (int tid = 0; tid < num_threads; tid++) {
@@ -53,6 +58,8 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
         memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->mutualInfo, num_outputs * sizeof(MutualInfo));
         delete params[tid];
     }
+
+    delete dataset;
 
     // Sort the auxiliar array and print the results
     std::sort(auxMutualInfo, auxMutualInfo + num_outputs * num_threads);
