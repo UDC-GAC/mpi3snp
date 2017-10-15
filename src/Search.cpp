@@ -45,9 +45,10 @@ void Search::execute() {
 
     try {
         engine->run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
-    } catch (const Dataset::ReadError &e) {
+    } catch (const Engine::Error &e) {
         IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
+        return;
     }
 
     // Gather the results on the master process
