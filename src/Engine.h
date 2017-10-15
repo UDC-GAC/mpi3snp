@@ -12,6 +12,13 @@
 
 class Engine {
 public:
+    class Error : public std::runtime_error {
+    public:
+        explicit Error(const std::string &message) : runtime_error(message) {};
+
+        ~Error() override = default;
+    };
+
     virtual void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
                      Statistics &statistics) = 0;
 };
