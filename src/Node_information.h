@@ -17,14 +17,16 @@ public:
 
     Node_information();
 
-    virtual std::string mpi_library_version() =0;
+    virtual std::string mpi_library_version() const =0;
 
-    virtual std::vector<int> processes() =0;
+    virtual std::vector<int> processes() const =0;
 
     static std::vector<Node_information *> gather(int process);
 
 protected:
-    virtual size_t to_byteblock(void **ptr) =0;
+    virtual size_t to_byteblock(void **ptr) const =0;
+
+    virtual void add_processes(std::vector<int> processes) =0;
 
     static Node_information *build_from_byteblock(const void *ptr);
 

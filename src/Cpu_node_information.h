@@ -14,12 +14,14 @@ public:
 
     explicit Cpu_node_information(const void *ptr);
 
-    std::string mpi_library_version() override;
+    std::string mpi_library_version() const override;
 
-    std::vector<int> processes() override;
+    std::vector<int> processes() const override;
 
 protected:
-    size_t to_byteblock(void **ptr) override;
+    size_t to_byteblock(void **ptr) const override;
+
+    void add_processes(std::vector<int> processes) override;
 
 private:
     std::string mpi_library;

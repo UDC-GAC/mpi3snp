@@ -6,8 +6,16 @@
 #include <array>
 #include <memory>
 #include <mpi.h>
+#include <algorithm>
 #include "Definitions.h"
+
+#ifdef MPI3SNP_USE_GPU
+#include "Gpu_node_information.h"
+#else
+
 #include "Cpu_node_information.h"
+
+#endif
 
 Node_information *Node_information::Builder::get_information() {
 #ifdef MPI3SNP_USE_GPU
@@ -19,7 +27,7 @@ Node_information *Node_information::Builder::get_information() {
 
 Node_information *Node_information::build_from_byteblock(const void *ptr) {
 #ifdef MPI3SNP_USE_GPU
-    return new Gpu_node_information();
+    return new Gpu_node_information(ptr);
 #else
     return new Cpu_node_information(ptr);
 #endif
@@ -47,8 +55,7 @@ std::vector<Node_information *> Node_information::gather(int process) {
     std::vector<Node_information *> output;
 
     if (rank == process) {
-        output.resize((unsigned long) count);
-        output[process] = local;
+        output.push_back(local);
 
         MPI_Status status;
         char *block;
@@ -62,7 +69,14 @@ std::vector<Node_information *> Node_information::gather(int process) {
                 MPI_Recv(block, block_size, MPI_BYTE, i, 0, MPI_COMM_WORLD, nullptr);
                 temp = Node_information::build_from_byteblock(block);
                 delete[] block;
-                output[i] = temp;
+                auto pos = std::find_if(output.begin(), output.end(),
+                                        [&temp](Node_information *it) { return it->hardware_id == temp->hardware_id; });
+                if (pos == output.end()) {
+                    output.push_back(temp);
+                } else {
+                    (*pos)->add_processes(temp->processes());
+                    delete temp;
+                }
             }
         }
     } else {

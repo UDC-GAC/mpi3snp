@@ -41,15 +41,15 @@ Cpu_node_information::Cpu_node_information(const void *pointer) : Node_informati
     offset += size * sizeof(int);
 }
 
-std::string Cpu_node_information::mpi_library_version() {
+std::string Cpu_node_information::mpi_library_version() const {
     return mpi_library;
 }
 
-std::vector<int> Cpu_node_information::processes() {
+std::vector<int> Cpu_node_information::processes() const {
     return process_list;
 }
 
-size_t Cpu_node_information::to_byteblock(void **pointer) {
+size_t Cpu_node_information::to_byteblock(void **pointer) const {
     size_t hid_size = sizeof(size_t) + hardware_id.length();
     size_t mpi_library_size = sizeof(size_t) + mpi_library.length();
     size_t process_vector_size = sizeof(size_t) + process_list.size() * sizeof(int);
@@ -79,4 +79,8 @@ size_t Cpu_node_information::to_byteblock(void **pointer) {
     offset += process_list.size() * sizeof(int);
 
     return offset;
+}
+
+void Cpu_node_information::add_processes(std::vector<int> processes) {
+    process_list.insert(process_list.end(), processes.begin(), processes.end());
 }
