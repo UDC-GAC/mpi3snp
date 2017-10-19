@@ -17,9 +17,17 @@ public:
 
     Node_information();
 
+    virtual std::string hostname() const =0;
+
+    virtual std::string cpu() const =0;
+
+    virtual long memory() const =0;
+
     virtual std::string mpi_library_version() const =0;
 
     virtual std::vector<int> processes() const =0;
+
+    virtual std::vector<std::string> gpus() const =0;
 
     static std::vector<Node_information *> gather(int process);
 
