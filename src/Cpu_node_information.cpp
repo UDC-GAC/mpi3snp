@@ -12,17 +12,33 @@ Cpu_node_information::Cpu_node_information() : Node_information() {
     MPI_Comm_rank(MPI_COMM_WORLD, &id);
     process_list.push_back(id);
     MPI_Get_library_version(mpi_v, &len);
-    mpi_library.copy(mpi_v, (unsigned long) len-1);
+    mpi_library.append(mpi_v, (unsigned long) len - 1);
 }
 
-Cpu_node_information::Cpu_node_information(const void *ptr) : Node_information() {
-    size_t hid_length = *((size_t *) &ptr[0]);
-    hardware_id.copy((char *) &ptr[sizeof(size_t)], hid_length);
-    size_t mpi_library_len = *((size_t *) &ptr[sizeof(size_t) + hid_length]);
-    mpi_library.copy((char *) &ptr[2 * sizeof(size_t) + hid_length], mpi_library_len);
-    size_t process_list_size = *((size_t *) &ptr[2 * sizeof(size_t) + hid_length + mpi_library_len]);
-    process_list.reserve(process_list_size);
-    memcpy(&process_list[0], &ptr[3 * sizeof(size_t) + hid_length + mpi_library_len], process_list_size * sizeof(int));
+Cpu_node_information::Cpu_node_information(const void *pointer) : Node_information() {
+    auto *ptr = (char *) pointer;
+    size_t size, offset = 0;
+
+    // Hardware ID string
+    memcpy(&size, ptr, sizeof(size_t));
+    offset += sizeof(size_t);
+    hardware_id.resize(size);
+    memcpy(&hardware_id[0], ptr + offset, size);
+    offset += size;
+
+    // MPI library string
+    memcpy(&size, ptr + offset, sizeof(size_t));
+    offset += sizeof(size_t);
+    mpi_library.resize(size);
+    memcpy(&mpi_library[0], ptr + offset, size);
+    offset += size;
+
+    // Process ID vector
+    memcpy(&size, ptr + offset, sizeof(size_t));
+    offset += sizeof(size_t);
+    process_list.resize(size);
+    memcpy(&process_list[0], ptr + offset, size * sizeof(int));
+    offset += size * sizeof(int);
 }
 
 std::string Cpu_node_information::mpi_library_version() {
@@ -30,22 +46,37 @@ std::string Cpu_node_information::mpi_library_version() {
 }
 
 std::vector<int> Cpu_node_information::processes() {
-    return std::vector<int>();
+    return process_list;
 }
 
-size_t Cpu_node_information::to_byteblock(void **ptr) {
-    size_t hid_size = sizeof(size_t) + hardware_id.length() * sizeof(char);
-    size_t mpi_library_size = sizeof(size_t) + mpi_library.length() * sizeof(char);
+size_t Cpu_node_information::to_byteblock(void **pointer) {
+    size_t hid_size = sizeof(size_t) + hardware_id.length();
+    size_t mpi_library_size = sizeof(size_t) + mpi_library.length();
     size_t process_vector_size = sizeof(size_t) + process_list.size() * sizeof(int);
+    *pointer = new char[hid_size + mpi_library_size + process_vector_size];
+    auto *ptr = (char *) *pointer;
+    size_t temp, offset = 0;
 
-    *ptr = new char[hid_size + mpi_library_size + process_vector_size];
-    *((size_t *) &(*ptr)[sizeof(size_t)]) = hardware_id.length();
-    memcpy(&(*ptr)[hid_size], &hardware_id[0], hardware_id.length());
-    *((size_t *) &(*ptr)[hid_size]) = mpi_library.length();
-    memcpy(&(*ptr)[hid_size + sizeof(size_t)], &mpi_library[0], mpi_library.length());
-    *((size_t *) &(*ptr)[hid_size + mpi_library_size]) = process_list.size();
-    memcpy(&(*ptr)[hid_size + mpi_library_size + sizeof(size_t)],
-           &process_list[0], process_list.size() * sizeof(int));
+    // Hardware ID string
+    temp = hardware_id.length();
+    memcpy(ptr + offset, &temp, sizeof(size_t));
+    offset += sizeof(size_t);
+    memcpy(ptr + offset, &hardware_id[0], hardware_id.length());
+    offset += hardware_id.length();
 
-    return hid_size + mpi_library_size + process_vector_size;
+    // MPI library string
+    temp = mpi_library.length();
+    memcpy(ptr + offset, &temp, sizeof(size_t));
+    offset += sizeof(size_t);
+    memcpy(ptr + offset, &mpi_library[0], mpi_library.length());
+    offset += mpi_library.length();
+
+    // Process ID vector
+    temp = process_list.size();
+    memcpy(ptr + offset, &temp, sizeof(size_t));
+    offset += sizeof(size_t);
+    memcpy(ptr + offset, &process_list[0], process_list.size() * sizeof(int));
+    offset += process_list.size() * sizeof(int);
+
+    return offset;
 }

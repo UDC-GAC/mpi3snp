@@ -9,7 +9,7 @@
 #include "Definitions.h"
 #include "Cpu_node_information.h"
 
-Node_information* Node_information::Builder::get_information() {
+Node_information *Node_information::Builder::get_information() {
 #ifdef MPI3SNP_USE_GPU
     return new Gpu_node_information();
 #else
@@ -17,7 +17,7 @@ Node_information* Node_information::Builder::get_information() {
 #endif
 }
 
-Node_information* Node_information::Builder::build_from_byteblock(const void *ptr) {
+Node_information *Node_information::build_from_byteblock(const void *ptr) {
 #ifdef MPI3SNP_USE_GPU
     return new Gpu_node_information();
 #else
@@ -34,20 +34,43 @@ Node_information::Node_information() {
         if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
             hardware_id.append(buffer.data());
     }
+    hardware_id.resize(hardware_id.length() - 1);
 }
 
-std::vector<Node_information> Node_information::gather(int process) {
-    std::vector<Node_information> output;
-    int proc_num;
+std::vector<Node_information *> Node_information::gather(int process) {
+    int rank, count;
 
-    MPI_Comm_size(MPI_COMM_WORLD, &proc_num);
-    output.reserve((unsigned long) proc_num);
+    MPI_Comm_size(MPI_COMM_WORLD, &count);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
     Node_information *local = Node_information::Builder::get_information();
-    void *byteblock;
-    size_t blocksize = local->to_byteblock(&byteblock);
-    delete local;
+    std::vector<Node_information *> output;
 
+    if (rank == process) {
+        output.resize((unsigned long) count);
+        output[process] = local;
 
-
-    return std::vector<Node_information>();
+        MPI_Status status;
+        char *block;
+        int block_size;
+        Node_information *temp;
+        for (int i = 0; i < count; i++) {
+            if (i != process) {
+                MPI_Probe(i, 0, MPI_COMM_WORLD, &status);
+                MPI_Get_count(&status, MPI_BYTE, &block_size);
+                block = new char[block_size];
+                MPI_Recv(block, block_size, MPI_BYTE, i, 0, MPI_COMM_WORLD, nullptr);
+                temp = Node_information::build_from_byteblock(block);
+                delete[] block;
+                output[i] = temp;
+            }
+        }
+    } else {
+        char *block;
+        int size = local->to_byteblock((void **) &block);
+        MPI_Send(block, size, MPI_BYTE, process, 0, MPI_COMM_WORLD);
+        delete[] block;
+        delete local;
+    }
+    return output;
 }

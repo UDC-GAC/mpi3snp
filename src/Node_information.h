@@ -13,9 +13,6 @@ public:
     class Builder {
     public:
         static Node_information *get_information();
-
-    private:
-        static Node_information *build_from_byteblock(const void *ptr);
     };
 
     Node_information();
@@ -24,10 +21,12 @@ public:
 
     virtual std::vector<int> processes() =0;
 
-    static std::vector<Node_information> gather(int process);
+    static std::vector<Node_information *> gather(int process);
 
 protected:
     virtual size_t to_byteblock(void **ptr) =0;
+
+    static Node_information *build_from_byteblock(const void *ptr);
 
     std::string hardware_id;
 
