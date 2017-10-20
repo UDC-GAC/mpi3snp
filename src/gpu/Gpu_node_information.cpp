@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cuda_runtime.h>
+#include <iostream>
 
 Gpu_node_information::Gpu_node_information() : Cpu_node_information() {
     int avail_gpus = 0;
@@ -35,9 +36,9 @@ Gpu_node_information::Gpu_node_information(const void *ptr) : Cpu_node_informati
         memcpy(&size, block + offset, sizeof(size_t));
         offset += sizeof(size_t);
         char gpu_info[size];
-        memcpy(block + offset, gpu_info, size);
+        memcpy(gpu_info, block + offset, size);
         offset += size;
-        g = std::string(gpu_info);
+        g = std::string(gpu_info, size);
     }
 }
 
@@ -61,7 +62,7 @@ size_t Gpu_node_information::to_byteblock(void **ptr) const {
     // Size = number of strings + (length of string + string) for each string in the vector
     size_t gpu_vector_size = sizeof(size_t);
     std::for_each(gpu_list.begin(), gpu_list.end(),
-                  [&gpu_vector_size](auto str) { gpu_vector_size = +sizeof(size_t) + str.length(); });
+                  [&gpu_vector_size](auto str) { gpu_vector_size += sizeof(size_t) + str.length(); });
     // Memory allocation
     *ptr = new char[sizeof(size_t) + cpu_block_size + gpu_vector_size];
     auto *buffer = (char *) *ptr;
@@ -80,13 +81,12 @@ size_t Gpu_node_information::to_byteblock(void **ptr) const {
     size = gpu_list.size();
     memcpy(buffer + offset, &size, sizeof(size_t));
     offset += sizeof(size_t);
-    for (auto g : gpu_list) {
+    for (const auto &g : gpu_list) {
         size = g.length();
         memcpy(buffer + offset, &size, sizeof(size_t));
         offset += sizeof(size_t);
         memcpy(buffer + offset, &g[0], size);
         offset += size;
     }
-
     return offset;
 }
