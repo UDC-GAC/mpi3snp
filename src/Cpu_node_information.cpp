@@ -115,7 +115,7 @@ std::vector<int> Cpu_node_information::processes() const {
 }
 
 std::vector<std::string> Cpu_node_information::gpus() const {
-    return gpu_list;
+    return std::vector<std::string>(0);
 }
 
 size_t Cpu_node_information::to_byteblock(void **pointer) const {

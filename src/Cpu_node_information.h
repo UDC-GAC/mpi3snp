@@ -5,7 +5,6 @@
 #ifndef MPI3SNP_CPU_NODE_INFORMATION_H
 #define MPI3SNP_CPU_NODE_INFORMATION_H
 
-
 #include "Node_information.h"
 
 class Cpu_node_information : public Node_information {
@@ -47,7 +46,6 @@ private:
     long memory_size;
     std::string mpi_library;
     std::vector<int> process_list;
-    std::vector<std::string> gpu_list;
 };
 
 
