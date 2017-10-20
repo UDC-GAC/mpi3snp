@@ -10,7 +10,9 @@
 #include "Definitions.h"
 
 #ifdef MPI3SNP_USE_GPU
-#include "Gpu_node_information.h"
+
+#include "gpu/Gpu_node_information.h"
+
 #else
 
 #include "Cpu_node_information.h"
