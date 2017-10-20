@@ -118,6 +118,20 @@ std::vector<std::string> Cpu_node_information::gpus() const {
     return std::vector<std::string>(0);
 }
 
+std::string Cpu_node_information::to_string() const {
+    std::string output;
+    output += "Hostname: " + hostname_str + "\n";
+    output += "CPU: " + cpu_str + "\n";
+    output += "Memory: " + std::to_string(memory_size / (1024 * 1024)) + " MB\n";
+    output += "MPI Library: " + mpi_library + "\n";
+    output += "Processes: ";
+    for (auto p : process_list){
+        output += "[" + std::to_string(p) + "] ";
+    }
+    output += "\n";
+    return output;
+}
+
 size_t Cpu_node_information::to_byteblock(void **pointer) const {
     const size_t buffer_size =  5 * sizeof(size_t) + hardware_id.length() + hostname_str.length() + cpu_str.length() +
             sizeof(unsigned int) + mpi_library.length() + process_list.size() * sizeof(int);

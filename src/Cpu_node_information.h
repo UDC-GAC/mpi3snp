@@ -25,6 +25,8 @@ public:
 
     std::vector<std::string> gpus() const override;
 
+    std::string to_string() const override;
+
 protected:
     size_t to_byteblock(void **ptr) const override;
 
