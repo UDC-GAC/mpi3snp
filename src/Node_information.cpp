@@ -3,10 +3,10 @@
 //
 
 #include "Node_information.h"
-#include <array>
-#include <memory>
-#include <mpi.h>
 #include <algorithm>
+#include <array>
+#include <fstream>
+#include <mpi.h>
 #include "Definitions.h"
 
 #ifdef MPI3SNP_USE_GPU
@@ -36,15 +36,10 @@ Node_information *Node_information::build_from_byteblock(const void *ptr) {
 }
 
 Node_information::Node_information() {
-    hardware_id.clear();
-    std::array<char, 128> buffer;
-    std::shared_ptr<FILE> pipe(popen(hid_bash_command, "r"), pclose);
-    if (!pipe) throw std::runtime_error("popen() failed!");
-    while (!feof(pipe.get())) {
-        if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
-            hardware_id.append(buffer.data());
-    }
-    hardware_id.resize(hardware_id.length() - 1);
+    std::ifstream ifs(hardware_id_file);
+    std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+    std::hash<std::string> hash_function;
+    hardware_id = std::to_string(hash_function(content));
 }
 
 std::vector<Node_information *> Node_information::gather(int process) {

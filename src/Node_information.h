@@ -43,8 +43,7 @@ protected:
     std::string hardware_id;
 
 private:
-    static constexpr const char *hid_bash_command = "echo \"$(cat /sys/class/pci_bus/*/device/*/vendor)$(cat "
-            "/sys/class/pci_bus/*/device/*/device)\" | md5sum | cut -d' ' -f 1";
+    static constexpr const char *hardware_id_file = "/proc/net/netlink";
 };
 
 
