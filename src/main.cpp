@@ -1,5 +1,6 @@
 #include "IOMpi.h"
 #include "Search.h"
+#include "Node_information.h"
 
 int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
@@ -24,6 +25,21 @@ int main(int argc, char **argv) {
         IOMpi::Instance().Set_print_level(IOMpi::D);
     }
 
+    // Print node information
+    auto info_list = Node_information::gather(0);
+    IOMpi::Instance().mprint<IOMpi::D>("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n");
+    for (int i = 0; i < info_list.size(); i++) {
+        IOMpi::Instance().mprint<IOMpi::D>(info_list[i]->to_string());
+        if (i == info_list.size() - 1){
+            IOMpi::Instance().mprint<IOMpi::D>("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n");
+        } else {
+            IOMpi::Instance().mprint<IOMpi::D>("---------------------------------------------\n");
+        }
+        delete info_list[i];
+    }
+    info_list.clear();
+
+    // Execute search
     Search *search = Search::Builder::build_from_args(arguments);
     if (search == nullptr) {
         MPI_Finalize();
