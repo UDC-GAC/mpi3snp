@@ -33,11 +33,9 @@ protected:
     void add_processes(std::vector<int> processes) override;
 
 private:
-    static constexpr const char *cpu_name_bash_command = "cat /proc/cpuinfo | grep \"model name\" | uniq | "
-            "cut -d':' -f2 | tail --bytes=+2";
+    static constexpr const char *cpu_file = "/proc/cpuinfo";
 
-    static constexpr const char *physical_memory_command = "cat /proc/meminfo | grep \"MemTotal\" | tr -d ' ' | "
-            "cut -d':' -f2 | cut -d'k' -f1";
+    static constexpr const char *memory_file = "/proc/meminfo";
 
     static std::string get_cpu_info();
 

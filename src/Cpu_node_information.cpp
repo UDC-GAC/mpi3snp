@@ -5,33 +5,48 @@
 #include "Cpu_node_information.h"
 #include <cstring>
 #include <climits>
+#include <fstream>
 #include <mpi.h>
 #include <unistd.h>
-#include <memory>
 
 std::string Cpu_node_information::get_cpu_info() {
-    std::string cpu;
-    std::array<char, 256> buffer;
-    std::shared_ptr<FILE> pipe(popen(cpu_name_bash_command, "r"), pclose);
-    if (!pipe) throw std::runtime_error("popen() failed!");
-    while (!feof(pipe.get())) {
-        if (fgets(buffer.data(), 256, pipe.get()) != nullptr)
-            cpu.append(buffer.data());
+    // Read complete file
+    std::ifstream ifs(cpu_file);
+    std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+
+    // Find keyword "model name"
+    unsigned long beginning, ending, pos = content.find("model name");
+    // Parse field
+    while (content[pos] != ':'){
+        pos++;
     }
-    cpu.resize(cpu.length() - 1);
-    return cpu;
+    pos += 2;
+    beginning = pos;
+    while (content[pos] != '\n'){
+        pos++;
+    }
+    ending = pos;
+    return content.substr(beginning, ending - beginning);
 }
 
 long Cpu_node_information::get_physical_memory() {
-    std::string size;
-    std::array<char, 256> buffer;
-    std::shared_ptr<FILE> pipe(popen(physical_memory_command, "r"), pclose);
-    if (!pipe) throw std::runtime_error("popen() failed!");
-    while (!feof(pipe.get())) {
-        if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
-            size.append(buffer.data());
+    // Read complete file
+    std::ifstream ifs(memory_file);
+    std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+
+    // Find keyword "MemTotal:"
+    unsigned long beginning, ending, pos = content.find("MemTotal:");
+    pos += 9;
+    // Parse field
+    while (content[pos] == ' '){
+        pos++;
     }
-    return atol(size.c_str()) * 1024;
+    beginning = pos;
+    while (content[pos] != '\n'){
+        pos++;
+    }
+    ending = pos;
+    return atol(content.substr(beginning, ending - beginning).c_str()) * 1024;
 }
 
 Cpu_node_information::Cpu_node_information() : Node_information() {
@@ -49,7 +64,6 @@ Cpu_node_information::Cpu_node_information() : Node_information() {
     process_list.push_back(rank);
 }
 
-// TODO: Función template que construye el objeto a partir del puntero en memoria
 Cpu_node_information::Cpu_node_information(const void *pointer) : Node_information() {
     auto *ptr = (char *) pointer;
     size_t size, offset = 0;
@@ -125,7 +139,7 @@ std::string Cpu_node_information::to_string() const {
     output += "Memory: " + std::to_string(memory_size / (1024 * 1024)) + " MB\n";
     output += "MPI Library: " + mpi_library + "\n";
     output += "Processes: ";
-    for (auto p : process_list){
+    for (auto p : process_list) {
         output += "[" + std::to_string(p) + "] ";
     }
     output += "\n";
@@ -133,8 +147,8 @@ std::string Cpu_node_information::to_string() const {
 }
 
 size_t Cpu_node_information::to_byteblock(void **pointer) const {
-    const size_t buffer_size =  5 * sizeof(size_t) + hardware_id.length() + hostname_str.length() + cpu_str.length() +
-            sizeof(unsigned int) + mpi_library.length() + process_list.size() * sizeof(int);
+    const size_t buffer_size = 5 * sizeof(size_t) + hardware_id.length() + hostname_str.length() + cpu_str.length() +
+                               sizeof(unsigned int) + mpi_library.length() + process_list.size() * sizeof(int);
     *pointer = new char[buffer_size];
     auto *ptr = (char *) *pointer;
     size_t temp, offset = 0;
