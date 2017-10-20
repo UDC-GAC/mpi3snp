@@ -9,12 +9,12 @@
 
 Gpu_node_information::Gpu_node_information() : Cpu_node_information() {
     int avail_gpus = 0;
-    if (cudaSuccess != cudaGetDeviceCount(&avail_gpus)){
+    if (cudaSuccess != cudaGetDeviceCount(&avail_gpus)) {
         return;
     }
 
     cudaDeviceProp gpu_prop;
-    for (int gid=0; gid<avail_gpus; gid++){
+    for (int gid = 0; gid < avail_gpus; gid++) {
         if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gid)) {
             continue;
         }
@@ -45,6 +45,16 @@ std::vector<std::string> Gpu_node_information::gpus() const {
     return gpu_list;
 }
 
+std::string Gpu_node_information::to_string() const {
+    std::string output = Cpu_node_information::to_string();
+    output += "GPUs: ";
+    for (const auto &g : gpu_list){
+        output += "[" + g + "] ";
+    }
+    output += "\n";
+    return output;
+}
+
 size_t Gpu_node_information::to_byteblock(void **ptr) const {
     void *cpu_info;
     size_t cpu_block_size = Cpu_node_information::to_byteblock(&cpu_info);
@@ -70,7 +80,7 @@ size_t Gpu_node_information::to_byteblock(void **ptr) const {
     size = gpu_list.size();
     memcpy(buffer + offset, &size, sizeof(size_t));
     offset += sizeof(size_t);
-    for (auto g : gpu_list){
+    for (auto g : gpu_list) {
         size = g.length();
         memcpy(buffer + offset, &size, sizeof(size_t));
         offset += sizeof(size_t);
