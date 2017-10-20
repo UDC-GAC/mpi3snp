@@ -5,9 +5,21 @@
 #include "Gpu_node_information.h"
 #include <algorithm>
 #include <cstring>
+#include <cuda_runtime.h>
 
 Gpu_node_information::Gpu_node_information() : Cpu_node_information() {
-    gpu_list.push_back("ejemplo de GPU");
+    int avail_gpus = 0;
+    if (cudaSuccess != cudaGetDeviceCount(&avail_gpus)){
+        return;
+    }
+
+    cudaDeviceProp gpu_prop;
+    for (int gid=0; gid<avail_gpus; gid++){
+        if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gid)) {
+            continue;
+        }
+        gpu_list.push_back(std::to_string(gid) + ": " + gpu_prop.name);
+    }
 }
 
 Gpu_node_information::Gpu_node_information(const void *ptr) : Cpu_node_information(((char *) ptr) + sizeof(size_t)) {
