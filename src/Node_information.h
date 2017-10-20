@@ -29,6 +29,8 @@ public:
 
     virtual std::vector<std::string> gpus() const =0;
 
+    virtual std::string to_string() const =0;
+
     static std::vector<Node_information *> gather(int process);
 
 protected:
