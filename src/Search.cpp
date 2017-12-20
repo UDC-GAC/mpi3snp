@@ -32,7 +32,13 @@ Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments) {
     search->num_outputs = arguments.output_num;
 
 #ifdef MPI3SNP_USE_GPU
-    search->engine = new GPUEngine(search->num_proc, search->proc_id, arguments.gpu_map, arguments.use_mi);
+    try {
+        search->engine = new GPUEngine(search->num_proc, search->proc_id, arguments.gpu_map, arguments.use_mi);
+    } catch (const Engine::Error &e) {
+        IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
+        MPI_Abort(MPI_COMM_WORLD, 1);
+        return nullptr;
+    }
 #else
     search->engine = new CPUEngine(search->num_proc, search->proc_id, arguments.cpu_threads, arguments.use_mi);
 #endif
