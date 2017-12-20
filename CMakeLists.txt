@@ -10,18 +10,22 @@ find_package(MPI REQUIRED)
 find_package(CUDA)
 
 # CXX compiler flags (common to GPU and CPU builds)
-set(CMAKE_CXX_FLAGS "-O3")
+# The definitions of stoi, stol, etc., as well as the to_string functions, are guarded by the condition
+#    if ((__cplusplus >= 201103L) && defined(_GLIBCXX_USE_C99) && !defined(_GLIBCXX_HAVE_BROKEN_VSWPRINTF))
+# To prevent compatibility issues, the macro _GLIBCXX_USE_C99 will be defined manually
+list(APPEND CMAKE_CXX_FLAGS "-std=c++14 -D_GLIBCXX_USE_C99 -O3")
 # Third party libraries (common to GPU and CPU builds)
 add_subdirectory(thirdparty/args)
 
 if (CUDA_FOUND AND NOT IGNORE_GPU)
     # GPU build
-    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -arch=sm_30 -std=c++11 -O3")
+    list(APPEND CUDA_NVCC_FLAGS "-arch=sm_30 -std=c++11 -D_GLIBCXX_USE_C99 -O3")
+    set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 
     set(MPI3SNP_USE_GPU ON)
     set(MPI3SNP_cuda_files src/gpu/Gpu_node_information.cpp src/gpu/EntropySearch.cu src/gpu/GPUEngine.cpp)
     set(MPI3SNP_c++_files src/main.cpp src/Arg_parser.cpp src/IOMpi.cpp src/Node_information.cpp src/Cpu_node_information.cpp
-            src/Distributor.cpp src/Dataset.cpp src/Search.cpp src/Statistics.cpp)
+            src/Distributor.cpp src/Individual.h src/SNP.h src/Dataset.cpp src/Search.cpp src/Statistics.cpp)
 
     configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/src/Definitions.h)
     include_directories(${MPI_CXX_INCLUDE_PATH} ${ARGS_SOURCE_DIR} ${PROJECT_BINARY_DIR}/src/)
