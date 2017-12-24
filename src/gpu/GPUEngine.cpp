@@ -8,7 +8,6 @@
 #include "GPUEngine.h"
 #include "../Dataset.h"
 #include "../Distributor.h"
-#include "../IOMpi.h"
 #include "EntropySearch.h"
 #include <cstring>
 
@@ -24,21 +23,11 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
         throw CUDAError("Could not find any CUDA-enabled GPU");
     }
 
-    cudaDeviceProp gpu_prop;
-
-    IOMpi::Instance().mprint<IOMpi::D>("Available GPUs:\n");
-    for (int gid = 0; gid < avail_gpus; gid++) {
-        if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gid))
-            throw CUDAError(cudaGetLastError());
-        IOMpi::Instance().mprint<IOMpi::D>("GPU " + std::to_string(gid) + ": " + gpu_prop.name + "\n");
-    }
-
     auto pos = std::find_if(gpu_map.begin(), gpu_map.end(),
                  [&proc_id](std::pair<unsigned int, unsigned int> item) { return item.first == proc_id; });
     gpu_id = pos == gpu_map.end() ? proc_id % avail_gpus : pos->second;
-    IOMpi::Instance().print<IOMpi::D>("Process " + std::to_string(proc_id) +
-                                      " using GPU " + std::to_string(gpu_id) + "\n");
 
+    cudaDeviceProp gpu_prop;
     if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gpu_id))
         throw CUDAError(cudaGetLastError());
     if (gpu_prop.major < 2 || !gpu_prop.canMapHostMemory) {
