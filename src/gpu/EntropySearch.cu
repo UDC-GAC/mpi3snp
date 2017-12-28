@@ -2144,18 +2144,7 @@ EntropySearch::~EntropySearch() {
 
 void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs, size_t num_outputs,
                                MutualInfo *mutualInfo) {
-    size_t free_mem, total_mem, block_size;
-    if (cudaSuccess == cudaMemGetInfo(&free_mem, &total_mem)) {
-        // Per pair memory usage
-        const size_t pp_memusage =
-                sizeof(uint2) + sizeof(GPUDoubleContTable) + 9 * (_numEntriesCase + _numEntriesCtrl) * sizeof(uint32_t);
-        // Per output memory usage
-        const size_t po_memusage = num_outputs * (sizeof(float) + sizeof(uint3));
-        const size_t max_block_size = (size_t) round(free_mem * .5 / (pp_memusage + po_memusage));
-        block_size = max_block_size < pairs.size() ? max_block_size : pairs.size();
-    } else {
-        block_size = 5000;
-    }
+    constexpr size_t block_size = 5000;
 
     if (cudaSuccess != cudaMalloc(&_devIds, block_size * sizeof(uint2)))
         throw CUDAError(cudaGetLastError());
