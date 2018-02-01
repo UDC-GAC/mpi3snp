@@ -50,9 +50,9 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     }
     statistics.End_timer("SNPs read time");
 
-    statistics.Add_value("SNP count", dataset->Get_SNP_count());
-    statistics.Add_value("Number of cases", dataset->Get_case_count());
-    statistics.Add_value("Number of controls", dataset->Get_ctrl_count());
+    statistics.Addi("SNP count", dataset->Get_SNP_count());
+    statistics.Addi("Number of cases", dataset->Get_case_count());
+    statistics.Addi("Number of controls", dataset->Get_ctrl_count());
 
     Distributor distributor(proc_num, proc_id, dataset->Get_SNP_count());
 
@@ -67,7 +67,7 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     for (auto p : pairs) {
         myTotalAnal += num_snps - p.second - 1;
     }
-    statistics.Add_value("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
+    statistics.Addi("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
 
     std::string timer_label;
     timer_label += "GPU " + std::to_string(gpu_id) + " runtime";

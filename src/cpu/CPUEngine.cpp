@@ -30,9 +30,9 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     statistics.End_timer("SNPs read time");
 
     Distributor distributor(num_proc, proc_id, dataset->Get_SNP_count());
-    statistics.Add_value("SNP count", dataset->Get_SNP_count());
-    statistics.Add_value("Number of cases", dataset->Get_case_count());
-    statistics.Add_value("Number of controls", dataset->Get_ctrl_count());
+    statistics.Addi("SNP count", dataset->Get_SNP_count());
+    statistics.Addi("Number of cases", dataset->Get_case_count());
+    statistics.Addi("Number of controls", dataset->Get_ctrl_count());
 
     std::vector<pthread_t> threadIDs(num_threads, 0);
 
@@ -97,7 +97,7 @@ void *CPUEngine::threadMI(void *arg) {
     myTotalAnal = search.mutualInfo(params->pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
 
     params->statistics.End_timer(timer_label);
-    params->statistics.Add_value(analysis_label, myTotalAnal);
+    params->statistics.Addi(analysis_label, myTotalAnal);
 
     memcpy(params->mutualInfo, mutualInfo, params->numOutputs * sizeof(MutualInfo));
 

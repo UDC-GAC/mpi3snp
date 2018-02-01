@@ -16,30 +16,80 @@ public:
 
     ~Statistics();
 
+    inline void Addi(const std::string &label, int value) {
+        pthread_mutex_lock(&ints_mutex);
+        Add<int>(label, value, ints);
+        pthread_mutex_unlock(&ints_mutex);
+    }
+
+    inline int Geti(const std::string &label) {
+        int retval = 0;
+        pthread_mutex_lock(&ints_mutex);
+        retval = Get<int>(label, ints);
+        pthread_mutex_unlock(&ints_mutex);
+        return retval;
+    }
+
+    inline void Addl(const std::string &label, long value) {
+        pthread_mutex_lock(&longs_mutex);
+        Add<long>(label, value, longs);
+        pthread_mutex_unlock(&longs_mutex);
+    }
+
+    inline long Getl(const std::string &label) {
+        long retval = 0;
+        pthread_mutex_lock(&longs_mutex);
+        retval = Get<long>(label, longs);
+        pthread_mutex_unlock(&longs_mutex);
+        return retval;
+    }
+
     void Begin_timer(const std::string &label);
 
     double End_timer(const std::string &label);
 
     double Get_timer(const std::string &label);
 
-    std::vector<std::pair<std::string, double>> Get_all_timers();
-
-    void Add_value(const std::string &label, int value);
-
-    int Get_value(const std::string &label);
-
-    std::vector<std::pair<std::string, int>> Get_all_values();
-
     std::string To_string();
 
 private:
+    template<typename T>
+    static typename T::const_iterator Find(const std::string &label, const T &vector) {
+        auto it = vector.begin();
+        while (it < vector.end() && std::get<0>(*it).compare(label) != 0) {
+            it++;
+        }
+        return it;
+    };
+
+    template<typename T>
+    static void Add(const std::string &label, const T &value, std::vector<std::pair<std::string, T>> &vector) {
+        auto pos = Find<std::vector<std::pair<std::string, T>>>(label, vector);
+        if (pos != vector.end()) {
+            pos = vector.erase(pos);
+        }
+        vector.insert(pos, std::make_pair(label, value));
+    };
+
+    template<typename T>
+    static T Get(const std::string &label, const std::vector<std::pair<std::string, T>> &vector) {
+        auto pos = Find<std::vector<std::pair<std::string, T>>>(label, vector);
+        if (pos != vector.end()) {
+            return std::get<1>(*pos);
+        }
+        return 0;
+    };
+
+    pthread_mutex_t ints_mutex;
+    std::vector<std::pair<std::string, int>> ints;
+
+    pthread_mutex_t longs_mutex;
+    std::vector<std::pair<std::string, long>> longs;
+
     std::vector<std::tuple<std::string, double, bool>>::const_iterator Find_timer_label(const std::string &label);
 
-    std::vector<std::pair<std::string, int>>::const_iterator Find_value_label(const std::string &label);
-
-    pthread_mutex_t timers_mutex, values_mutex;
+    pthread_mutex_t timers_mutex;
     std::vector<std::tuple<std::string, double, bool>> timers;
-    std::vector<std::pair<std::string, int>> values;
 };
 
 #endif //MPI3SNP_STATISTICS_H
