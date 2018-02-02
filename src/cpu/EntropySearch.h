@@ -15,7 +15,7 @@ public:
     EntropySearch(uint32_t numSNPs, uint16_t numCases, const std::vector<std::vector<uint32_t> *> &cases,
                   uint16_t numCtrls, const std::vector<std::vector<uint32_t> *> &ctrls);
 
-    uint64_t mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, MutualInfo *mutualInfo,
+    long mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, MutualInfo *mutualInfo,
                         uint16_t numOutputs, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI);
 
 private:

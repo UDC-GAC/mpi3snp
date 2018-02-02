@@ -25,12 +25,12 @@ EntropySearch::EntropySearch(uint32_t numSNPs, uint16_t numCases, const std::vec
     entY -= p * log2(p);
 }
 
-uint64_t EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, MutualInfo *mutualInfo,
+long EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, MutualInfo *mutualInfo,
                                    uint16_t numOutputs, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI) {
 
     uint32_t id1, id2, id3;
     float auxMIValue;
-    uint64_t numAnal = 0;
+    long numAnal = 0;
     MutualInfo *auxMI;
     DoubleContTable *doubleTable = new DoubleContTable(num_cases, num_ctrls);
     TripleContTable tripleTable;

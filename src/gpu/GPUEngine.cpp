@@ -62,12 +62,12 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     std::vector<std::pair<uint32_t, uint32_t >> pairs;
     distributor.Get_pairs(1, 0, pairs);
 
-    int myTotalAnal = 0;
+    long myTotalAnal = 0;
     const unsigned int num_snps = dataset->Get_SNP_count();
     for (auto p : pairs) {
         myTotalAnal += num_snps - p.second - 1;
     }
-    statistics.Addi("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
+    statistics.Addl("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
 
     std::string timer_label;
     timer_label += "GPU " + std::to_string(gpu_id) + " runtime";

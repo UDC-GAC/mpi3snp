@@ -86,7 +86,7 @@ void *CPUEngine::threadMI(void *arg) {
     // Number of entries of the array full
     uint16_t numEntriesWithMI = 0;
 
-    int myTotalAnal = 0;
+    long myTotalAnal = 0;
     std::string timer_label;
     timer_label += "Thread " + std::to_string(params->tid) + " runtime";
     std::string analysis_label;
@@ -97,7 +97,7 @@ void *CPUEngine::threadMI(void *arg) {
     myTotalAnal = search.mutualInfo(params->pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
 
     params->statistics.End_timer(timer_label);
-    params->statistics.Addi(analysis_label, myTotalAnal);
+    params->statistics.Addl(analysis_label, myTotalAnal);
 
     memcpy(params->mutualInfo, mutualInfo, params->numOutputs * sizeof(MutualInfo));
 
