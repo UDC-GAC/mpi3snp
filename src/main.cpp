@@ -7,9 +7,6 @@ int main(int argc, char **argv) {
 
     double stime, etime;
 
-    /*get the startup time*/
-    stime = MPI_Wtime();
-
     Arg_parser::Arguments arguments;
     try {
         arguments = Arg_parser(argc, argv).get_arguments();
@@ -39,6 +36,9 @@ int main(int argc, char **argv) {
         info_list.clear();
     }
 
+    /*get the startup time*/
+    stime = MPI_Wtime();
+
     // Execute search
     Search *search = Search::Builder::build_from_args(arguments);
     if (search == nullptr) {
@@ -47,7 +47,9 @@ int main(int argc, char **argv) {
     }
     search->execute();
 
+    /*get the ending time*/
     etime = MPI_Wtime();
+
     IOMpi::Instance().mprint<IOMpi::B>("Overall time: " + std::to_string(etime - stime) + " seconds\n");
 
     delete search;
