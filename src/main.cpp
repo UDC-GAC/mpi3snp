@@ -1,3 +1,30 @@
+/*
+ * This file is part of MPI3SNP.
+ * Copyright (C) 2018 Christian Ponte Fernández
+ *
+ * MPI3SNP is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * MPI3SNP is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file main.cpp
+ * @author Christian Ponte
+ * @date 27 February 2018
+ *
+ * @brief Main program. Initializes the MPI environment, parses the command-line arguments, prints debug information if
+ * necessary, instantiates the Search and terminates the execution.
+ */
+
 #include "IOMpi.h"
 #include "Search.h"
 #include "Node_information.h"
@@ -26,7 +53,7 @@ int main(int argc, char **argv) {
         IOMpi::Instance().mprint<IOMpi::D>("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n");
         for (int i = 0; i < info_list.size(); i++) {
             IOMpi::Instance().mprint<IOMpi::D>(info_list[i]->to_string());
-            if (i == info_list.size() - 1){
+            if (i == info_list.size() - 1) {
                 IOMpi::Instance().mprint<IOMpi::D>("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n");
             } else {
                 IOMpi::Instance().mprint<IOMpi::D>("---------------------------------------------\n");
