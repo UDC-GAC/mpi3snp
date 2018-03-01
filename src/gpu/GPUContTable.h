@@ -1,18 +1,34 @@
 /*
- * GPUContTable.h
+ * This file is part of MPI3SNP.
+ * Copyright (C) 2018 by Christian Ponte
  *
- *  Created on: 09/10/2014
- *      Author: jorge
+ * MPI3SNP is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * MPI3SNP is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONTTABLE_H_
-#define CONTTABLE_H_
+/**
+ * @file gpu/GPUContTable.h
+ * @author Christian Ponte
+ * @author Jorge González
+ * @date 1 March 2018
+ *
+ * @brief GPUContTable structure declaration for the auxiliar 2-SNP contingency tables.
+ */
+
+#ifndef MPI3SNP_GPUCONTTABLE_H
+#define MPI3SNP_GPUCONTTABLE_H
 
 #include "CUDAError.h"
-
-/*
- * Structure for the auxiliar 2-SNP contingency tables
- */
 
 struct GPUDoubleContTable {
     void initialize(uint16_t numEntriesCase, uint16_t numEntriesCtrl) {
@@ -73,4 +89,4 @@ private:
 };
 
 
-#endif /* CONTTABLE_H_ */
+#endif //MPI3SNP_GPUCONTTABLE_H

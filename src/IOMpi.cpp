@@ -1,6 +1,28 @@
-//
-// Created by christian on 10/03/17.
-//
+/*
+ * This file is part of MPI3SNP.
+ * Copyright (C) 2018 by Christian Ponte
+ *
+ * MPI3SNP is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * MPI3SNP is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file IOMpi.cpp
+ * @author Christian Ponte
+ * @date 1 March 2018
+ *
+ * @brief IOMpi class members implementation.
+ */
 
 #include "IOMpi.h"
 #include <mpi.h>
@@ -57,7 +79,7 @@ int IOMpi::Get_io_rank() {
 }
 
 
-void IOMpi::scprint_nol(std::ostream &ostream, const std::string &s){
+void IOMpi::scprint_nol(std::ostream &ostream, const std::string &s) {
     int tag;
 
     pthread_mutex_lock(&cprintf_mutex);

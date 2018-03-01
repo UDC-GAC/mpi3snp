@@ -1,6 +1,6 @@
 /*
  * This file is part of MPI3SNP.
- * Copyright (C) 2018 Christian Ponte Fernández
+ * Copyright (C) 2018 by Christian Ponte
  *
  * MPI3SNP is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 /**
  * @file main.cpp
  * @author Christian Ponte
- * @date 27 February 2018
+ * @date 1 March 2018
  *
  * @brief Main program. Initializes the MPI environment, parses the command-line arguments, prints debug information if
  * necessary, instantiates the Search and terminates the execution.
