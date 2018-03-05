@@ -47,7 +47,11 @@ and writes the results to a third file. All file paths are provided to the progr
 ```
 
 Additional configuration options (specific to either CPU or GPU implementation) are available to the user, and can be
-consulted using the `-h` flag.  
+consulted using the `-h` flag.
+
+## Sample files
+
+[Sample files](https://github.com/chponte/mpi3snp/wiki/Sample-files) can be found on MPI3SNP's wiki. These are a syntetic dataset used for performance evaluation, which describe the input file format and can be used for verification/evaluation purposes.
 
 ## Troubleshooting
 
