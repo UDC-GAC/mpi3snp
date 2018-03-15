@@ -36,6 +36,10 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
         proc_id(proc_id),
         use_mi(use_mi),
         statistics(statistics) {
+    statistics.Begin_timer("CUDA initialization time");
+    cudaFree(nullptr);
+    statistics.End_timer("CUDA initialization time");
+
     int avail_gpus = 0;
     if (cudaSuccess != cudaGetDeviceCount(&avail_gpus))
         throw CUDAError(cudaGetLastError());
