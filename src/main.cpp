@@ -77,12 +77,11 @@ int main(int argc, char **argv) {
 
     /*get the ending time*/
     etime = MPI_Wtime();
-    IOMpi::Instance().mprint<IOMpi::B>("Overall time: " + std::to_string(etime - stime) + " seconds\n");
-
-    // Print runtime statistics to stdout
-    IOMpi::Instance().cprint<IOMpi::B>(statistics.To_string());
 
     delete search;
+    // Print runtime statistics to stdout
+    IOMpi::Instance().cprint<IOMpi::B>(statistics.To_string());
+    IOMpi::Instance().mprint<IOMpi::B>("Overall time: " + std::to_string(etime - stime) + " seconds\n");
 
     MPI_Finalize();
     return 0;
