@@ -82,7 +82,7 @@ private:
             it++;
         }
         return it;
-    };
+    }
 
     template<typename T>
     static void Add(const std::string &label, const T &value, std::vector<std::pair<std::string, T>> &vector) {
@@ -91,7 +91,7 @@ private:
             pos = vector.erase(pos);
         }
         vector.insert(pos, std::make_pair(label, value));
-    };
+    }
 
     template<typename T>
     static T Get(const std::string &label, const std::vector<std::pair<std::string, T>> &vector) {
@@ -100,7 +100,7 @@ private:
             return std::get<1>(*pos);
         }
         return 0;
-    };
+    }
 
     pthread_mutex_t ints_mutex;
     std::vector<std::pair<std::string, int>> ints;
