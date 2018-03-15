@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
     stime = MPI_Wtime();
 
     // Execute search
-    Search *search = Search::Builder::build_from_args(arguments);
+    Statistics statistics;
+    Search *search = Search::Builder::build_from_args(arguments, statistics);
     if (search == nullptr) {
         MPI_Finalize();
         return 0;
@@ -76,8 +77,10 @@ int main(int argc, char **argv) {
 
     /*get the ending time*/
     etime = MPI_Wtime();
-
     IOMpi::Instance().mprint<IOMpi::B>("Overall time: " + std::to_string(etime - stime) + " seconds\n");
+
+    // Print runtime statistics to stdout
+    IOMpi::Instance().cprint<IOMpi::B>(statistics.To_string());
 
     delete search;
 

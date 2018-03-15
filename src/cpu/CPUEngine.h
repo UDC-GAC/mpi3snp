@@ -31,12 +31,11 @@
 
 class CPUEngine : public Engine {
 public:
-    CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi);
+    CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, Statistics &statistics);
 
     virtual ~CPUEngine() = default;
 
-    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
-             Statistics &statistics) override;
+    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) override;
 
 private:
     static void *threadMI(void *arg);
@@ -45,6 +44,7 @@ private:
     int proc_id;
     int num_threads;
     bool use_mi;
+    Statistics &statistics;
 };
 
 #endif //MPI3SNP_CPUENGINE_H

@@ -36,7 +36,7 @@ class Search {
 public:
     class Builder {
     public:
-        static Search *build_from_args(Arg_parser::Arguments arguments);
+        static Search *build_from_args(Arg_parser::Arguments arguments, Statistics &statistics);
 
         Builder() = delete;
     };

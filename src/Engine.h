@@ -40,8 +40,7 @@ public:
         ~Error() override = default;
     };
 
-    virtual void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
-                     Statistics &statistics) = 0;
+    virtual void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) = 0;
 };
 
 #endif //MPI3SNP_ENGINE_H

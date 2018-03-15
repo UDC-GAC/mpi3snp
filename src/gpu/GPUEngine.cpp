@@ -31,10 +31,11 @@
 #include <cstring>
 
 GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
-                     std::vector<std::pair<unsigned int, unsigned int>> gpu_map, bool use_mi) :
+                     std::vector<std::pair<unsigned int, unsigned int>> gpu_map, bool use_mi, Statistics &statistics) :
         proc_num(proc_num),
         proc_id(proc_id),
-        use_mi(use_mi) {
+        use_mi(use_mi),
+        statistics(statistics) {
     int avail_gpus = 0;
     if (cudaSuccess != cudaGetDeviceCount(&avail_gpus))
         throw CUDAError(cudaGetLastError());
@@ -43,7 +44,7 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
     }
 
     auto pos = std::find_if(gpu_map.begin(), gpu_map.end(),
-                 [&proc_id](std::pair<unsigned int, unsigned int> item) { return item.first == proc_id; });
+                            [&proc_id](std::pair<unsigned int, unsigned int> item) { return item.first == proc_id; });
     gpu_id = pos == gpu_map.end() ? proc_id % avail_gpus : pos->second;
 
     cudaDeviceProp gpu_prop;
@@ -58,8 +59,7 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
         throw CUDAError(cudaGetLastError());
 }
 
-void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
-                    Statistics &statistics) {
+void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) {
     statistics.Begin_timer("SNPs read time");
     Dataset *dataset;
     try {

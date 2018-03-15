@@ -30,15 +30,14 @@
 #include "../ThreadError.h"
 #include <cfloat>
 
-CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi) {
-    this->num_proc = num_proc;
-    this->proc_id = proc_id;
-    this->num_threads = num_threads;
-    this->use_mi = use_mi;
-}
+CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, Statistics &statistics) :
+        num_proc(num_proc),
+        proc_id(proc_id),
+        num_threads(num_threads),
+        use_mi(use_mi),
+        statistics(statistics) {}
 
-void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs,
-                    Statistics &statistics) {
+void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) {
     statistics.Begin_timer("SNPs read time");
     Dataset *dataset;
     try {

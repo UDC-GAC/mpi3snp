@@ -41,7 +41,7 @@
 
 #endif
 
-Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments) {
+Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments, Statistics &statistics) {
     auto *search = new Search();
     MPI_Comm_rank(MPI_COMM_WORLD, &search->proc_id);
     MPI_Comm_size(MPI_COMM_WORLD, &search->num_proc);
@@ -52,24 +52,24 @@ Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments) {
 
 #ifdef MPI3SNP_USE_GPU
     try {
-        search->engine = new GPUEngine(search->num_proc, search->proc_id, arguments.gpu_map, arguments.use_mi);
+        search->engine = new GPUEngine(search->num_proc, search->proc_id, arguments.gpu_map, arguments.use_mi, statistics);
     } catch (const Engine::Error &e) {
         IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
         return nullptr;
     }
 #else
-    search->engine = new CPUEngine(search->num_proc, search->proc_id, arguments.cpu_threads, arguments.use_mi);
+    search->engine = new CPUEngine(search->num_proc, search->proc_id, arguments.cpu_threads, arguments.use_mi,
+                                   statistics);
 #endif
     return search;
 }
 
 void Search::execute() {
     std::vector<MutualInfo> mutual_info, result;
-    Statistics statistics;
 
     try {
-        engine->run(tped_file, tfam_file, mutual_info, num_outputs, statistics);
+        engine->run(tped_file, tfam_file, mutual_info, num_outputs);
     } catch (const Engine::Error &e) {
         IOMpi::Instance().smprint<IOMpi::E>(std::cerr, std::string(e.what()) + "\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
@@ -97,6 +97,4 @@ void Search::execute() {
     }
 
     IOMpi::Instance().cprint<IOMpi::D>("3-SNP analysis finalized\n");
-    // Print runtime statistics to stdout
-    IOMpi::Instance().cprint<IOMpi::B>(statistics.To_string());
 }
