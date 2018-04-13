@@ -15,5 +15,4 @@
 # You should have received a copy of the GNU General Public License
 # along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
 
-add_library(args INTERFACE)
-target_include_directories(args INTERFACE .)
+add_subdirectory(args)

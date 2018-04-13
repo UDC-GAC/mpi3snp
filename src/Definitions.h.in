@@ -29,6 +29,8 @@ This program comes with ABSOLUTELY NO WARRANTY."
 #define MPI3SNP_DESCRIPTION "Description"
 #define MPI3SNP_HELP "@PROJECT_NAME@ online help: <https://github.com/chponte/mpi3snp/>"
 
-#cmakedefine MPI3SNP_USE_GPU
+#define GPU 42101858400
+#define CPU 42101858401
+#define TARGET_ARCH ${TARGET_ARCH}
 
 #endif //MPI3SNP_DEFINITIONS_H

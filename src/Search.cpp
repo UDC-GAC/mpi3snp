@@ -30,14 +30,14 @@
 #include "Dataset.h"
 #include "Definitions.h"
 
-#ifdef MPI3SNP_USE_GPU
+#if TARGET_ARCH == CPU
 
-#include "gpu/GPUEngine.h"
-#include "gpu/CUDAError.h"
+#include "cpu/CPUEngine.h"
 
 #else
 
-#include "cpu/CPUEngine.h"
+#include "gpu/GPUEngine.h"
+#include "gpu/CUDAError.h"
 
 #endif
 
@@ -50,7 +50,10 @@ Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments, Statis
     search->out_file = arguments.output;
     search->num_outputs = arguments.output_num;
 
-#ifdef MPI3SNP_USE_GPU
+#if TARGET_ARCH == CPU
+    search->engine = new CPUEngine(search->num_proc, search->proc_id, arguments.cpu_threads, arguments.use_mi,
+                                   statistics);
+#else
     try {
         search->engine = new GPUEngine(search->num_proc, search->proc_id, arguments.gpu_map, arguments.use_mi, statistics);
     } catch (const Engine::Error &e) {
@@ -58,9 +61,6 @@ Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments, Statis
         MPI_Abort(MPI_COMM_WORLD, 1);
         return nullptr;
     }
-#else
-    search->engine = new CPUEngine(search->num_proc, search->proc_id, arguments.cpu_threads, arguments.use_mi,
-                                   statistics);
 #endif
     return search;
 }
