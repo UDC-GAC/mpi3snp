@@ -37,6 +37,10 @@ CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, St
         use_mi(use_mi),
         statistics(statistics) {}
 
+std::pair<uint32_t, uint32_t> constructor(uint32_t first, uint32_t second) {
+    return std::make_pair(first, second);
+};
+
 void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) {
     statistics.Begin_timer("SNPs read time");
     Dataset *dataset;
@@ -47,7 +51,7 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     }
     statistics.End_timer("SNPs read time");
 
-    Distributor distributor(num_proc, proc_id, dataset->Get_SNP_count());
+    Distributor<uint32_t, std::pair<uint32_t, uint32_t>> distributor(dataset->Get_SNP_count(), num_proc * num_threads);
     statistics.Addi("SNP count", dataset->Get_SNP_count());
     statistics.Addi("Number of cases", dataset->Get_case_count());
     statistics.Addi("Number of controls", dataset->Get_ctrl_count());
@@ -58,7 +62,8 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     std::vector<ThreadParams *> params(num_threads);
     for (int tid = 0; tid < num_threads; tid++) {
         params[tid] = new ThreadParams(tid, *dataset, num_outputs, statistics);
-        distributor.Get_pairs(num_threads, tid, params[tid]->pairs);
+        distributor.get_pairs([](uint32_t first, uint32_t second) { return std::make_pair(first, second); },
+                              proc_id * num_threads + tid, params[tid]->pairs);
 
         // Create thread entities that call to the functions below
         if (pthread_create(&threadIDs[tid], nullptr, threadMI, params[tid]) != 0) {

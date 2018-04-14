@@ -17,7 +17,7 @@
 
 list(APPEND COMMON_SOURCE_FILES
         main.cpp Arg_parser.cpp Arg_parser.h IOMpi.cpp IOMpi.h Node_information.cpp Node_information.h
-        Cpu_node_information.cpp Cpu_node_information.h Distributor.cpp Distributor.h Individual.h SNP.h
+        Cpu_node_information.cpp Cpu_node_information.h Distributor.h Individual.h SNP.h
         Dataset.cpp Dataset.h Search.cpp Search.h Statistics.cpp Statistics.h)
 
 configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/src/Definitions.h)

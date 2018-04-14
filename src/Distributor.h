@@ -28,19 +28,29 @@
 #ifndef MPI3SNP_DISTRIBUTOR_H
 #define MPI3SNP_DISTRIBUTOR_H
 
-#include <inttypes.h>
 #include <vector>
 
+template<typename T, typename U>
 class Distributor {
 public:
-    Distributor(unsigned int p_num, unsigned int p_id, unsigned long count);
+    Distributor(const T &size, const unsigned int &frac) : size(size), frac(frac) {};
 
-    void Get_pairs(unsigned int t_num, unsigned int t_id,
-                            std::vector<std::pair<uint32_t, uint32_t>> &values);
+    void get_pairs(U (*constructor)(T, T), const unsigned int &id, std::vector<U> &values) {
+        const size_t total_pairs = size * (size - 1) / 2;
+        values.reserve(total_pairs / frac + (id < total_pairs % frac));
+        T i, j, offset;
+        offset = id;
+        for (i = 0; i < size; i++) {
+            for (j = i + 1 + offset; j < size; j += frac) {
+                values.push_back(constructor(i, j));
+            }
+            offset = j - size;
+        }
+    }
 
 private:
-    const unsigned long count;
-    std::vector<uint32_t> distribution;
+    const T size;
+    const unsigned int frac;
 };
 
 #endif //MPI3SNP_DISTRIBUTOR_H

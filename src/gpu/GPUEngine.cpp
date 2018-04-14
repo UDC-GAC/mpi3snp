@@ -77,18 +77,21 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     statistics.Addi("Number of cases", dataset->Get_case_count());
     statistics.Addi("Number of controls", dataset->Get_ctrl_count());
 
-    Distributor distributor(proc_num, proc_id, dataset->Get_SNP_count());
+    Distributor<uint32_t, uint2> distributor(dataset->Get_SNP_count(), proc_num);
 
     EntropySearch search(use_mi, dataset->Get_SNP_count(), dataset->Get_case_count(), dataset->Get_ctrl_count(),
                          dataset->Get_cases(), dataset->Get_ctrls());
 
-    std::vector<std::pair<uint32_t, uint32_t >> pairs;
-    distributor.Get_pairs(1, 0, pairs);
+    std::vector<uint2> pairs;
+    distributor.get_pairs([](uint32_t x, uint32_t y) {
+        uint2 p {x, y};
+        return p;
+    }, proc_id, pairs);
 
     long myTotalAnal = 0;
     const unsigned int num_snps = dataset->Get_SNP_count();
     for (auto p : pairs) {
-        myTotalAnal += num_snps - p.second - 1;
+        myTotalAnal += num_snps - p.y - 1;
     }
     statistics.Addl("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
 

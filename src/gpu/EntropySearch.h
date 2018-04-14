@@ -38,7 +38,7 @@ public:
 
     ~EntropySearch();
 
-    void mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs, size_t num_outputs, MutualInfo *mutualInfo);
+    void mutualInfo(const std::vector<uint2> &pairs, size_t num_outputs, MutualInfo *mutualInfo);
 
 private:
     bool _isMI;

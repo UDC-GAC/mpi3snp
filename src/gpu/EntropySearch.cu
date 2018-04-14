@@ -2165,7 +2165,7 @@ EntropySearch::~EntropySearch() {
         throw CUDAError(cudaGetLastError());
 }
 
-void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs, size_t num_outputs,
+void EntropySearch::mutualInfo(const std::vector<uint2> &pairs, size_t num_outputs,
                                MutualInfo *mutualInfo) {
     constexpr size_t block_size = 5000;
 
@@ -2205,15 +2205,10 @@ void EntropySearch::mutualInfo(std::vector<std::pair<uint32_t, uint32_t >> pairs
     // Number of entries of the array full
     uint16_t numEntriesWithMI = 0;
 
-    uint2 ids[block_size];
     for (unsigned long i = 0; i < pairs.size(); i += block_size) {
         const unsigned long num_pairs = pairs.size() - i < block_size ? pairs.size() - i : block_size;
-        for (int j = 0; j < num_pairs; j++) {
-            ids[j].x = pairs[i + j].first;
-            ids[j].y = pairs[i + j].second;
-        }
 
-        if (cudaSuccess != cudaMemcpy(_devIds, ids, num_pairs * sizeof(uint2), cudaMemcpyHostToDevice))
+        if (cudaSuccess != cudaMemcpy(_devIds, &pairs.at(0) + i, num_pairs * sizeof(uint2), cudaMemcpyHostToDevice))
             throw CUDAError(cudaGetLastError());
 
         uint32_t nblocks = (num_pairs + NUM_TH_PER_BLOCK - 1) / NUM_TH_PER_BLOCK;
