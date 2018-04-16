@@ -37,10 +37,6 @@ CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, St
         use_mi(use_mi),
         statistics(statistics) {}
 
-std::pair<uint32_t, uint32_t> constructor(uint32_t first, uint32_t second) {
-    return std::make_pair(first, second);
-};
-
 void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) {
     statistics.Begin_timer("SNPs read time");
     Dataset *dataset;
