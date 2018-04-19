@@ -48,14 +48,14 @@ Arg_parser::Arguments Arg_parser::get_arguments() {
     args::Positional<std::string> r_tped(required, "tped-file", "path to TPED file");
     args::Positional<std::string> r_tfam(required, "tfam-file", "path to TFAM file");
     args::Positional<std::string> r_output(required, "output-file", "path to output file");
-#ifdef MPI3SNP_USE_GPU
-    args::Group gpu_opt(parser, "GPU runtime configuration", args::Group::Validators::DontCare);
-    args::ValueFlagList<std::pair<unsigned int, unsigned int>>
-            gpu_map(gpu_opt, "pid:gid", "list of process to GPU assignation", {'g', "gpu-id"});
-#else
+#if TARGET_ARCH == CPU
     args::Group cpu_opt(parser, "CPU runtime configuration", args::Group::Validators::DontCare);
     args::ValueFlag<unsigned int> cpu_threads(cpu_opt, "thread-num", "number of threads to use per process",
                                               {'t', "threads"});
+#elif TARGET_ARCH == GPU
+    args::Group gpu_opt(parser, "GPU runtime configuration", args::Group::Validators::DontCare);
+    args::ValueFlagList<std::pair<unsigned int, unsigned int>>
+            gpu_map(gpu_opt, "pid:gid", "list of process to GPU assignation", {'g', "gpu-id"});
 #endif
     args::Group verb(parser, "Verbosity level", args::Group::Validators::AtMostOne);
     args::Flag verb_b(verb, "benchmarking", "print runtimes", {"benchmarking"});
@@ -98,16 +98,15 @@ Arg_parser::Arguments Arg_parser::get_arguments() {
     arguments.benchmarking = verb_b;
     arguments.debug = verb_d;
 
-#ifdef MPI3SNP_USE_GPU
-    if (gpu_map) {
-        arguments.gpu_map = args::get(gpu_map);
-    }
-#else
+#if TARGET_ARCH == CPU
     if (cpu_threads) {
         arguments.cpu_threads = args::get(cpu_threads);
     }
+#elif TARGET_ARCH == GPU
+    if (gpu_map) {
+        arguments.gpu_map = args::get(gpu_map);
+    }
 #endif
-
     if (output_num) {
         arguments.output_num = args::get(output_num);
     }
