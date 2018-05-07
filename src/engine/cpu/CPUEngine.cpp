@@ -27,7 +27,7 @@
 #include "CPUEngine.h"
 #include "ThreadParams.h"
 #include "EntropySearch.h"
-#include "../ThreadError.h"
+#include "ThreadError.h"
 #include <cfloat>
 
 CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, Statistics &statistics) :

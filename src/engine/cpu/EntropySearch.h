@@ -29,7 +29,7 @@
 
 #include <cstdint>
 #include <vector>
-#include "../MutualInfo.h"
+#include "MutualInfo.h"
 #include "ContTable.h"
 
 class EntropySearch {

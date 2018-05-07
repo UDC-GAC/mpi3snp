@@ -16,35 +16,32 @@
  * along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * @file cpu/CPUEngine.h
- * @author Christian Ponte
- * @date 1 March 2018
- *
- * @brief CPUEngine class declaration, implementing the abstract class Engine.
- */
+#ifndef MPI3SNP_THREADPARAMS_H
+#define MPI3SNP_THREADPARAMS_H
 
-#ifndef MPI3SNP_CPUENGINE_H
-#define MPI3SNP_CPUENGINE_H
+#include "MutualInfo.h"
+#include "Distributor.h"
+#include "Dataset.h"
 
-#include "../Engine.h"
+struct ThreadParams {
+    ThreadParams(int tid, Dataset &dataset, uint16_t numOutputs, Statistics &statistics) :
+            tid(tid),
+            dataset(dataset),
+            numOutputs(numOutputs),
+            mutualInfo(new MutualInfo[numOutputs]),
+            statistics(statistics) {}
 
-class CPUEngine : public Engine {
-public:
-    CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, Statistics &statistics);
+    ~ThreadParams() {
+        delete[] mutualInfo;
+    }
 
-    virtual ~CPUEngine() = default;
-
-    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) override;
-
-private:
-    static void *threadMI(void *arg);
-
-    int num_proc;
-    int proc_id;
-    int num_threads;
-    bool use_mi;
+    const int tid;
+    Dataset &dataset;
+    std::vector<std::pair<uint32_t, uint32_t>> pairs;
+    const uint16_t numOutputs;
+    MutualInfo *mutualInfo;
     Statistics &statistics;
 };
 
-#endif //MPI3SNP_CPUENGINE_H
+
+#endif //MPI3SNP_THREADPARAMS_H

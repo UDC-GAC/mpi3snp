@@ -25,6 +25,7 @@
  * necessary, instantiates the Search and terminates the execution.
  */
 
+#include <mpi.h>
 #include "IOMpi.h"
 #include "Search.h"
 #include "Node_information.h"

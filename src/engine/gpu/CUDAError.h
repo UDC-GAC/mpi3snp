@@ -20,7 +20,7 @@
 #define MPI3SNP_CUDAERROR_H
 
 #include <cuda_runtime.h>
-#include "../Engine.h"
+#include "Engine.h"
 
 class CUDAError : public Engine::Error {
 public:

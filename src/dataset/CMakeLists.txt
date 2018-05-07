@@ -15,13 +15,5 @@
 # You should have received a copy of the GNU General Public License
 # along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
 
-configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/include/Definitions.h)
-add_library(definitions INTERFACE)
-target_include_directories(definitions INTERFACE ${PROJECT_BINARY_DIR}/include/)
-
-add_subdirectory(utils)
-add_subdirectory(dataset)
-add_subdirectory(engine)
-
-add_executable(MPI3SNP main.cpp)
-target_link_libraries(MPI3SNP MPI::MPI_CXX engine_search)
+add_library(dataset Individual.h SNP.h Dataset.cpp Dataset.h)
+target_include_directories(dataset INTERFACE .)

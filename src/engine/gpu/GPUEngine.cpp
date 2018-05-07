@@ -25,8 +25,8 @@
  */
 
 #include "GPUEngine.h"
-#include "../Dataset.h"
-#include "../Distributor.h"
+#include "Dataset.h"
+#include "Distributor.h"
 #include "EntropySearch.h"
 #include <cstring>
 

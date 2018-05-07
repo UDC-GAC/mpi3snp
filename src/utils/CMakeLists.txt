@@ -1,27 +1,20 @@
 
 # This file is part of MPI3SNP.
 # Copyright (C) 2018 by Christian Ponte
-#
+# 
 # MPI3SNP is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#
+# 
 # MPI3SNP is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
 
-configure_file(${PROJECT_SOURCE_DIR}/src/Definitions.h.in ${PROJECT_BINARY_DIR}/include/Definitions.h)
-add_library(definitions INTERFACE)
-target_include_directories(definitions INTERFACE ${PROJECT_BINARY_DIR}/include/)
-
-add_subdirectory(utils)
-add_subdirectory(dataset)
-add_subdirectory(engine)
-
-add_executable(MPI3SNP main.cpp)
-target_link_libraries(MPI3SNP MPI::MPI_CXX engine_search)
+add_library(utils Arg_parser.cpp Arg_parser.h Node_information.cpp Node_information.h Cpu_node_information.cpp Cpu_node_information.h IOMpi.cpp IOMpi.h Statistics.cpp Statistics.h)
+target_include_directories(utils INTERFACE .)
+target_link_libraries(utils PRIVATE MPI::MPI_CXX args definitions)

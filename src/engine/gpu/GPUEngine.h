@@ -17,40 +17,29 @@
  */
 
 /**
- * @file Search.h
+ * @file gpu/GPUEngine.h
  * @author Christian Ponte
  * @date 1 March 2018
  *
- * @brief Search class definition.
+ * @brief GPUEngine class declaration.
  */
 
-#ifndef MPI3SNP_SEARCH_H
-#define MPI3SNP_SEARCH_H
+#ifndef MPI3SNP_GPUENGINE_H
+#define MPI3SNP_GPUENGINE_H
 
-#include <mpi.h>
-#include <vector>
-#include "Arg_parser.h"
 #include "Engine.h"
 
-class Search {
+class GPUEngine : public Engine {
 public:
-    class Builder {
-    public:
-        static Search *build_from_args(Arg_parser::Arguments arguments, Statistics &statistics);
+    GPUEngine(unsigned int proc_num, unsigned int proc_id, std::vector<std::pair<unsigned int, unsigned int>> gpu_map,
+              bool use_mi, Statistics &statistics);
 
-        Builder() = delete;
-    };
-
-    // Execute the epistasis search
-    void execute();
+    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) override;
 
 private:
-    Search() = default;
-
-    Engine *engine;
-    int proc_id, num_proc;
-    std::string tped_file, tfam_file, out_file;
-    unsigned int num_outputs;
+    unsigned int proc_num, proc_id, gpu_id;
+    bool use_mi;
+    Statistics &statistics;
 };
 
-#endif //MPI3SNP_SEARCH_H
+#endif //MPI3SNP_GPUENGINE_H

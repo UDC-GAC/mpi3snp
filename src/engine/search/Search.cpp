@@ -26,18 +26,19 @@
 
 #include "Search.h"
 #include <fstream>
+#include <mpi.h>
 #include "IOMpi.h"
 #include "Dataset.h"
 #include "Definitions.h"
 
 #if TARGET_ARCH == CPU
 
-#include "cpu/CPUEngine.h"
+#include "CPUEngine.h"
 
 #else
 
-#include "gpu/GPUEngine.h"
-#include "gpu/CUDAError.h"
+#include "GPUEngine.h"
+#include "CUDAError.h"
 
 #endif
 
