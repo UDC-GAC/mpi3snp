@@ -15,6 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with MPI3SNP. If not, see <http://www.gnu.org/licenses/>.
 
-cuda_add_library(engine_gpu CUDAError.h GPUEngine.cpp GPUEngine.h GPUContTable.h EntropySearch.cu EntropySearch.h)
+add_library(engine_gpu CUDAError.h GPUEngine.cpp GPUEngine.h GPUContTable.h EntropySearch.cu EntropySearch.h)
 target_include_directories(engine_gpu INTERFACE .)
 target_link_libraries(engine_gpu dataset engine_distributor engine_interface)
