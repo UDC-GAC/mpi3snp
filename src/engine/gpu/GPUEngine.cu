@@ -42,7 +42,7 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
 
     int avail_gpus = 0;
     if (cudaSuccess != cudaGetDeviceCount(&avail_gpus))
-        throw CUDAError(cudaGetLastError());
+        throw CUDAError();
     if (avail_gpus == 0) {
         throw CUDAError("Could not find any CUDA-enabled GPU");
     }
@@ -53,14 +53,14 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
 
     cudaDeviceProp gpu_prop;
     if (cudaSuccess != cudaGetDeviceProperties(&gpu_prop, gpu_id))
-        throw CUDAError(cudaGetLastError());
+        throw CUDAError();
     if (gpu_prop.major < 2 || !gpu_prop.canMapHostMemory) {
         throw CUDAError("GPU " + std::to_string(gpu_id) + " does not meet compute capabilities\n" +
                         "Name: " + gpu_prop.name + "\n" + "Compute capability: " +
                         std::to_string(gpu_prop.major) + "." + std::to_string(gpu_prop.minor));
     }
     if (cudaSuccess != cudaSetDevice(gpu_id))
-        throw CUDAError(cudaGetLastError());
+        throw CUDAError();
 }
 
 void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) {

@@ -33,7 +33,7 @@
 struct GPUDoubleContTable {
     void initialize(uint16_t numEntriesCase, uint16_t numEntriesCtrl) {
         if (cudaSuccess != cudaMalloc(&base_address, (9 * numEntriesCase + 9 * numEntriesCtrl) * sizeof(uint32_t))) {
-            throw CUDAError(cudaGetLastError());
+            throw CUDAError();
         }
 
         _cases00 = base_address;
@@ -60,7 +60,7 @@ struct GPUDoubleContTable {
     void finalize() {
         if (base_address != nullptr) {
             if (cudaSuccess != cudaFree(base_address)) {
-                throw CUDAError(cudaGetLastError());
+                throw CUDAError();
             }
         }
     }
