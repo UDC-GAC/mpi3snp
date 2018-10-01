@@ -69,19 +69,19 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     Dataset *dataset;
     try {
         dataset = new Dataset(tped, tfam, Dataset::Transposed);
-    } catch (const Dataset::ReadError &error) {
+    } catch (const Dataset::Read_error &error) {
         throw Engine::Error(error.what());
     }
     statistics.End_timer("SNPs read time");
 
-    statistics.Addi("SNP count", dataset->Get_SNP_count());
-    statistics.Addi("Number of cases", dataset->Get_case_count());
-    statistics.Addi("Number of controls", dataset->Get_ctrl_count());
+    statistics.Addi("SNP count", dataset->get_SNP_count());
+    statistics.Addi("Number of cases", dataset->get_case_count());
+    statistics.Addi("Number of controls", dataset->get_ctrl_count());
 
-    Distributor<uint32_t, uint2> distributor(dataset->Get_SNP_count(), proc_num);
+    Distributor<uint32_t, uint2> distributor(dataset->get_SNP_count(), proc_num);
 
-    EntropySearch search(use_mi, dataset->Get_SNP_count(), dataset->Get_case_count(), dataset->Get_ctrl_count(),
-                         dataset->Get_cases(), dataset->Get_ctrls());
+    EntropySearch search(use_mi, dataset->get_SNP_count(), dataset->get_case_count(), dataset->get_ctrl_count(),
+                         dataset->get_cases(), dataset->get_ctrls());
 
     std::vector<uint2> pairs;
     distributor.get_pairs([](uint32_t x, uint32_t y) {
@@ -90,7 +90,7 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     }, proc_id, pairs);
 
     long myTotalAnal = 0;
-    const unsigned int num_snps = dataset->Get_SNP_count();
+    const unsigned int num_snps = dataset->get_SNP_count();
     for (auto p : pairs) {
         myTotalAnal += num_snps - p.y - 1;
     }

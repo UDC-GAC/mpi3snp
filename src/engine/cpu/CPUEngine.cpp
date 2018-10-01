@@ -43,15 +43,15 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     Dataset *dataset;
     try {
         dataset = new Dataset(tped, tfam, Dataset::Regular);
-    } catch (const Dataset::ReadError &error) {
+    } catch (const Dataset::Read_error &error) {
         throw Engine::Error(error.what());
     }
     statistics.End_timer("SNPs read time");
 
-    Distributor<uint32_t, std::pair<uint32_t, uint32_t>> distributor(dataset->Get_SNP_count(), num_proc * num_threads);
-    statistics.Addi("SNP count", dataset->Get_SNP_count());
-    statistics.Addi("Number of cases", dataset->Get_case_count());
-    statistics.Addi("Number of controls", dataset->Get_ctrl_count());
+    Distributor<uint32_t, std::pair<uint32_t, uint32_t>> distributor(dataset->get_SNP_count(), num_proc * num_threads);
+    statistics.Addi("SNP count", dataset->get_SNP_count());
+    statistics.Addi("Number of cases", dataset->get_case_count());
+    statistics.Addi("Number of controls", dataset->get_ctrl_count());
 
     std::vector<pthread_t> threadIDs(num_threads, 0);
 
@@ -94,8 +94,8 @@ void *CPUEngine::threadMI(void *arg) {
 
     ThreadParams *params = (ThreadParams *) arg;
 
-    EntropySearch search(params->dataset.Get_SNP_count(), params->dataset.Get_case_count(), params->dataset.Get_cases(),
-                         params->dataset.Get_ctrl_count(), params->dataset.Get_ctrls());
+    EntropySearch search(params->dataset.get_SNP_count(), params->dataset.get_case_count(), params->dataset.get_cases(),
+                         params->dataset.get_ctrl_count(), params->dataset.get_ctrls());
 
     // Variables to work with the outputs
     MutualInfo *mutualInfo = new MutualInfo[params->numOutputs];

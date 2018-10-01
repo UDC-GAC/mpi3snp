@@ -37,7 +37,7 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation re
 
     file.open(tfam_path.c_str(), std::ios::in);
     if (!file.is_open()) {
-        throw ReadError("Error while opening " + tfam_path + ", check file path/permissions");
+        throw Read_error("Error while opening " + tfam_path + ", check file path/permissions");
     }
     try {
         Individual ind;
@@ -45,13 +45,13 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation re
             individuals.push_back(ind);
         }
     } catch (const Individual::InvalidIndividual &e) {
-        throw ReadError("Error in " + tfam_path + ":" + std::to_string(individuals.size() + 1) + ": " + e.what());
+        throw Read_error("Error in " + tfam_path + ":" + std::to_string(individuals.size() + 1) + ": " + e.what());
     }
     file.close();
 
     file.open(tped_path.c_str(), std::ios::in);
     if (!file.is_open()) {
-        throw ReadError("Error while opening " + tped_path + ", check file path/permissions");
+        throw Read_error("Error while opening " + tped_path + ", check file path/permissions");
     }
     try {
         SNP snp;
@@ -59,12 +59,12 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation re
             if (snp.genotypes.size() == individuals.size()) {
                 snps.push_back(snp);
             } else {
-                throw ReadError("Error in " + tped_path + ":" + std::to_string(snps.size() + 1) +
+                throw Read_error("Error in " + tped_path + ":" + std::to_string(snps.size() + 1) +
                                 ": the number of nucleotides does not match the number of individuals");
             }
         }
     } catch (const SNP::InvalidSNP &e) {
-        throw ReadError("Error in " + tped_path + ":" + std::to_string(snps.size() + 1) + ": " + e.what());
+        throw Read_error("Error in " + tped_path + ":" + std::to_string(snps.size() + 1) + ": " + e.what());
     }
     file.close();
 
@@ -72,10 +72,10 @@ Dataset::Dataset(std::string tped_path, std::string tfam_path, Representation re
 
     switch (rep) {
         case Regular:
-            Regular_representation(individuals, snps);
+            regular_representation(individuals, snps);
             break;
         case Transposed:
-            Transposed_representation(individuals, snps);
+            transposed_representation(individuals, snps);
             break;
     }
 }
@@ -87,7 +87,7 @@ unsigned long find_index(unsigned long start, unsigned long end, std::function<b
     return start;
 }
 
-void Dataset::Regular_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
+void Dataset::regular_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
     std::vector<uint32_t> *cases_vec = nullptr;
     std::vector<uint32_t> *ctrls_vec = nullptr;
     uint32_t cases_buff[3], ctrls_buff[3];
@@ -149,7 +149,7 @@ void Dataset::Regular_representation(std::vector<Individual> &inds, std::vector<
     num_cases = (cases[0][0].size() - 1) * 32 + n_cases_buff;
 }
 
-void Dataset::Transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
+void Dataset::transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps) {
     std::vector<unsigned long> scases(32), sctrls(32);
     unsigned long ctrlpos = 0, casepos = 0;
     uint32_t cases_buffer[3], ctrls_buffer[3];

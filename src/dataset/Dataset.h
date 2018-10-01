@@ -36,11 +36,11 @@
 
 class Dataset {
 public:
-    class ReadError : public std::runtime_error {
+    class Read_error : public std::runtime_error {
     public:
-        ReadError(const std::string message) : runtime_error(message) {}
+        Read_error(const std::string message) : runtime_error(message) {}
 
-        virtual ~ReadError() {};
+        virtual ~Read_error() {};
     };
 
     enum Representation {
@@ -52,30 +52,30 @@ public:
 
     ~Dataset();
 
-    inline std::vector<std::vector<uint32_t> *> &Get_cases() {
+    inline std::vector<std::vector<uint32_t> *> &get_cases() {
         return cases;
     }
 
-    inline std::vector<std::vector<uint32_t> *> &Get_ctrls() {
+    inline std::vector<std::vector<uint32_t> *> &get_ctrls() {
         return ctrls;
     }
 
-    inline uint32_t Get_SNP_count() {
+    inline uint32_t get_SNP_count() {
         return snp_count;
     }
 
-    inline uint16_t Get_ctrl_count() {
+    inline uint16_t get_ctrl_count() {
         return num_ctrls;
     }
 
-    inline uint16_t Get_case_count() {
+    inline uint16_t get_case_count() {
         return num_cases;
     }
 
 private:
-    void Regular_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
+    void regular_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
 
-    void Transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
+    void transposed_representation(std::vector<Individual> &inds, std::vector<SNP> &snps);
 
     std::vector<std::vector<uint32_t> *> cases;
     std::vector<std::vector<uint32_t> *> ctrls;
