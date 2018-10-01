@@ -1,5 +1,6 @@
 /*
  * This file is part of MPI3SNP.
+ * Copyright (C) 2014 - 2017 by Jorge González
  * Copyright (C) 2018 by Christian Ponte
  *
  * MPI3SNP is free software: you can redistribute it and/or modify
@@ -18,8 +19,8 @@
 
 /**
  * @file gpu/EntropySearch.cu
- * @author Christian Ponte
  * @author Jorge González
+ * @author Christian Ponte
  * @date 1 March 2018
  *
  * @brief EntropySearch class members implementation.

@@ -18,6 +18,7 @@
 
 /**
  * @file cpu/EntropySearch.cpp
+ * @author Jorge González
  * @author Christian Ponte
  * @date 1 March 2018
  *
