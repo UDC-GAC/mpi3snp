@@ -26,10 +26,9 @@
  */
 
 #include "CPUEngine.h"
-#include "ThreadParams.h"
-#include "EntropySearch.h"
+#include "MutualInformation.h"
 #include "ThreadError.h"
-#include <cfloat>
+#include "Distributor.h"
 
 CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, Statistics &statistics) :
         num_proc(num_proc),
@@ -38,7 +37,7 @@ CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, St
         use_mi(use_mi),
         statistics(statistics) {}
 
-void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) {
+void CPUEngine::run(std::string tped, std::string tfam, std::vector<Position> &mutual_info, size_t num_outputs) {
     statistics.Begin_timer("SNPs read time");
     Dataset *dataset;
     try {
@@ -56,9 +55,9 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     std::vector<pthread_t> threadIDs(num_threads, 0);
 
     // Computation of the single-SNP entropy
-    std::vector<ThreadParams *> params(num_threads);
+    std::vector<Shared_block *> params(num_threads);
     for (int tid = 0; tid < num_threads; tid++) {
-        params[tid] = new ThreadParams(tid, *dataset, num_outputs, statistics);
+        params[tid] = new Shared_block(tid, *dataset, num_outputs, statistics);
         distributor.get_pairs([](uint32_t first, uint32_t second) { return std::make_pair(first, second); },
                               proc_id * num_threads + tid, params[tid]->pairs);
 
@@ -70,12 +69,12 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
         }
     }
 
-    MutualInfo auxMutualInfo[num_threads * num_outputs];
+    Position auxMutualInfo[num_threads * num_outputs];
 
     // Wait for the completion of all threads
     for (int tid = 0; tid < num_threads; tid++) {
         pthread_join(threadIDs[tid], nullptr);
-        memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->mutualInfo, num_outputs * sizeof(MutualInfo));
+        memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->positions, num_outputs * sizeof(Position));
         delete params[tid];
     }
 
@@ -84,7 +83,7 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     // Sort the auxiliar array and print the results
     std::sort(auxMutualInfo, auxMutualInfo + num_outputs * num_threads);
     mutual_info.resize(num_outputs);
-    memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (num_threads - 1), sizeof(MutualInfo) * num_outputs);
+    memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (num_threads - 1), sizeof(Position) * num_outputs);
 }
 
 void *CPUEngine::thread(void *arg) {
@@ -92,21 +91,15 @@ void *CPUEngine::thread(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr);
 
-    ThreadParams *params = (ThreadParams *) arg;
+    Shared_block *params = (Shared_block *) arg;
 
-    EntropySearch search(params->dataset.get_SNP_count(), params->dataset.get_case_count(), params->dataset.get_cases(),
-                         params->dataset.get_ctrl_count(), params->dataset.get_ctrls());
+    Algorithm<std::pair<uint32_t, uint32_t>> *search = new MutualInformation(
+            params->dataset.get_SNP_count(), params->dataset.get_case_count(), params->dataset.get_cases(),
+            params->dataset.get_ctrl_count(), params->dataset.get_ctrls());
 
     // Variables to work with the outputs
-    MutualInfo *mutualInfo = new MutualInfo[params->numOutputs];
-    // The minimum value in the array
-    float minMI = FLT_MAX;
-    // The position of the minimum value
-    uint16_t minMIPos = 0;
-    // Number of entries of the array full
-    uint16_t numEntriesWithMI = 0;
+    Position *positions = new Position[params->numOutputs];
 
-    long myTotalAnal = 0;
     std::string timer_label;
     timer_label += "Thread " + std::to_string(params->tid) + " runtime";
     std::string analysis_label;
@@ -114,14 +107,13 @@ void *CPUEngine::thread(void *arg) {
 
     params->statistics.Begin_timer(timer_label);
 
-    myTotalAnal = search.mutualInfo(params->pairs, mutualInfo, params->numOutputs, minMI, minMIPos, numEntriesWithMI);
+    long myTotalAnal = search->compute(params->pairs, params->numOutputs, positions);
 
     params->statistics.End_timer(timer_label);
     params->statistics.Addl(analysis_label, myTotalAnal);
 
-    memcpy(params->mutualInfo, mutualInfo, params->numOutputs * sizeof(MutualInfo));
+    memcpy(params->positions, positions, params->numOutputs * sizeof(Position));
 
-    delete[] mutualInfo;
-    return nullptr;
+    delete[] positions;
+    delete search;
 }
-

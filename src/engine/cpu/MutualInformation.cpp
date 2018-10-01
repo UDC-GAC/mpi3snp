@@ -17,21 +17,22 @@
  */
 
 /**
- * @file cpu/EntropySearch.cpp
+ * @file cpu/MutualInformation.cpp
  * @author Jorge González
  * @author Christian Ponte
- * @date 1 March 2018
+ * @date 1 October 2018
  *
- * @brief EntropySearch class members implementation.
+ * @brief MutualInformation class members implementation.
  */
 
-#include "EntropySearch.h"
-
-#include <cmath>
+#include "MutualInformation.h"
 #include <algorithm>
+#include <cfloat>
+#include <cmath>
 
-EntropySearch::EntropySearch(uint32_t numSNPs, uint16_t numCases, const std::vector<std::vector<uint32_t> *> &cases,
-                             uint16_t numCtrls, const std::vector<std::vector<uint32_t> *> &ctrls) :
+MutualInformation::MutualInformation(uint32_t numSNPs, uint16_t numCases,
+                                     const std::vector<std::vector<uint32_t> *> &cases,
+                                     uint16_t numCtrls, const std::vector<std::vector<uint32_t> *> &ctrls) :
         num_snps(numSNPs),
         cases(cases),
         num_cases(numCases),
@@ -48,13 +49,15 @@ EntropySearch::EntropySearch(uint32_t numSNPs, uint16_t numCases, const std::vec
     entY -= p * log2(p);
 }
 
-long EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, MutualInfo *mutualInfo,
-                                   uint16_t numOutputs, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI) {
-
+long MutualInformation::compute(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, uint16_t num_outputs,
+                                Position *output) {
     uint32_t id1, id2, id3;
     float auxMIValue;
     long numAnal = 0;
-    MutualInfo *auxMI;
+    Position *auxMI;
+    float minMI = FLT_MAX;
+    uint16_t minMIPos = UINT16_MAX;
+    uint16_t numEntriesWithMI = 0;
     DoubleContTable *doubleTable = new DoubleContTable(num_cases, num_ctrls);
     TripleContTable tripleTable;
 
@@ -69,12 +72,12 @@ long EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> 
         auxMIValue = _calcDoubleMI(doubleTable);
 
         // There are empty values in the array
-        if (numEntriesWithMI < numOutputs) {
-            auxMI = &mutualInfo[numEntriesWithMI];
-            auxMI->_id1 = id1;
-            auxMI->_id2 = id2;
-            auxMI->_id3 = 0;
-            auxMI->_mutualInfoValue = auxMIValue;
+        if (numEntriesWithMI < num_outputs) {
+            auxMI = &output[numEntriesWithMI];
+            auxMI->p1 = id1;
+            auxMI->p2 = id2;
+            auxMI->p3 = 0;
+            auxMI->rank = auxMIValue;
 
             // If this is the minimum value of the array
             if (auxMIValue < minMI) {
@@ -84,18 +87,18 @@ long EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> 
 
             numEntriesWithMI++;
         } else if (auxMIValue > minMI) { // The value must be inserted
-            auxMI = &mutualInfo[minMIPos];
-            auxMI->_id1 = id1;
-            auxMI->_id2 = id2;
-            auxMI->_id3 = 0;
-            auxMI->_mutualInfoValue = auxMIValue;
+            auxMI = &output[minMIPos];
+            auxMI->p1 = id1;
+            auxMI->p2 = id2;
+            auxMI->p3 = 0;
+            auxMI->rank = auxMIValue;
 
             // Find the new minimum
-            auxMI = std::min_element(mutualInfo, mutualInfo + numOutputs);
-            minMI = auxMI->_mutualInfoValue;
+            auxMI = std::min_element(output, output + num_outputs);
+            minMI = auxMI->rank;
             uint16_t i = 0;
             while (1) {
-                if (mutualInfo[i]._mutualInfoValue == minMI) {
+                if (output[i].rank == minMI) {
                     break;
                 }
                 i++;
@@ -111,12 +114,12 @@ long EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> 
             auxMIValue = _calcTripleMI(&tripleTable);
 
             // There are empty values in the array
-            if (numEntriesWithMI < numOutputs) {
-                auxMI = &mutualInfo[numEntriesWithMI];
-                auxMI->_id1 = id1;
-                auxMI->_id2 = id2;
-                auxMI->_id3 = id3;
-                auxMI->_mutualInfoValue = auxMIValue;
+            if (numEntriesWithMI < num_outputs) {
+                auxMI = &output[numEntriesWithMI];
+                auxMI->p1 = id1;
+                auxMI->p2 = id2;
+                auxMI->p3 = id3;
+                auxMI->rank = auxMIValue;
 
                 // If this is the minimum value of the array
                 if (auxMIValue < minMI) {
@@ -126,18 +129,18 @@ long EntropySearch::mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> 
 
                 numEntriesWithMI++;
             } else if (auxMIValue > minMI) { // The value must be inserted
-                auxMI = &mutualInfo[minMIPos];
-                auxMI->_id1 = id1;
-                auxMI->_id2 = id2;
-                auxMI->_id3 = id3;
-                auxMI->_mutualInfoValue = auxMIValue;
+                auxMI = &output[minMIPos];
+                auxMI->p1 = id1;
+                auxMI->p2 = id2;
+                auxMI->p3 = id3;
+                auxMI->rank = auxMIValue;
 
                 // Find the new minimum
-                auxMI = std::min_element(mutualInfo, mutualInfo + numOutputs);
-                minMI = auxMI->_mutualInfoValue;
+                auxMI = std::min_element(output, output + num_outputs);
+                minMI = auxMI->rank;
                 uint16_t i = 0;
                 while (1) {
-                    if (mutualInfo[i]._mutualInfoValue == minMI) {
+                    if (output[i].rank == minMI) {
                         break;
                     }
                     i++;
@@ -159,9 +162,9 @@ uint32_t popcount(uint32_t v) {
     return ((u + (u >> 3)) & 030707070707) % 63;
 }
 
-void EntropySearch::_fillDoubleContTable(std::vector<uint32_t> *s1_ctrls, std::vector<uint32_t> *s1_cases,
-                                         std::vector<uint32_t> *s2_ctrls, std::vector<uint32_t> *s2_cases,
-                                         DoubleContTable *table) {
+void MutualInformation::_fillDoubleContTable(std::vector<uint32_t> *s1_ctrls, std::vector<uint32_t> *s1_cases,
+                                             std::vector<uint32_t> *s2_ctrls, std::vector<uint32_t> *s2_cases,
+                                             DoubleContTable *table) {
     for (int i = 0; i < _numEntriesCases; i++) {
         table->_cases00[i] = s1_cases[0][i] & s2_cases[0][i];
         table->_cases01[i] = s1_cases[0][i] & s2_cases[1][i];
@@ -187,7 +190,7 @@ void EntropySearch::_fillDoubleContTable(std::vector<uint32_t> *s1_ctrls, std::v
     }
 }
 
-float EntropySearch::_calcDoubleMI(DoubleContTable *table) {
+float MutualInformation::_calcDoubleMI(DoubleContTable *table) {
 
     uint32_t contCases[9];
     uint32_t contCtrls[9];
@@ -244,8 +247,8 @@ float EntropySearch::_calcDoubleMI(DoubleContTable *table) {
     return entX + entY - entAll;
 }
 
-void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleContTable *tripleTable,
-                                         std::vector<uint32_t> *s3_ctrls, std::vector<uint32_t> *s3_cases) {
+void MutualInformation::_fillTripleContTable(DoubleContTable *doubleTable, TripleContTable *tripleTable,
+                                             std::vector<uint32_t> *s3_ctrls, std::vector<uint32_t> *s3_cases) {
 
     uint32_t aux;
     uint32_t auxSNP3Value;
@@ -435,7 +438,7 @@ void EntropySearch::_fillTripleContTable(DoubleContTable *doubleTable, TripleCon
     }
 }
 
-float EntropySearch::_calcTripleMI(TripleContTable *table) {
+float MutualInformation::_calcTripleMI(TripleContTable *table) {
 
     float entX = 0.0;
     float entAll = 0.0;

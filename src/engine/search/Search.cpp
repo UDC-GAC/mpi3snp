@@ -20,17 +20,17 @@
 /**
  * @file Search.cpp
  * @author Christian Ponte
- * @date 1 March 2018
+ * @date 1 October 2018
  *
  * @brief Search class members implementation.
  */
 
 #include "Search.h"
-#include <fstream>
-#include <mpi.h>
 #include "IOMpi.h"
 #include "Dataset.h"
 #include "Definitions.h"
+#include <fstream>
+#include <mpi.h>
 
 #if TARGET_ARCH == CPU
 
@@ -68,7 +68,7 @@ Search *Search::Builder::build_from_args(Arg_parser::Arguments arguments, Statis
 }
 
 void Search::execute() {
-    std::vector<MutualInfo> mutual_info, result;
+    std::vector<Position> mutual_info, result;
 
     try {
         engine->run(tped_file, tfam_file, mutual_info, num_outputs);
@@ -83,17 +83,17 @@ void Search::execute() {
         result.resize(num_outputs * num_proc);
     }
 
-    MPI_Gather(&mutual_info.front(), num_outputs * sizeof(MutualInfo), MPI_BYTE,
-               &result.front(), num_outputs * sizeof(MutualInfo), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Gather(&mutual_info.front(), num_outputs * sizeof(Position), MPI_BYTE,
+               &result.front(), num_outputs * sizeof(Position), MPI_BYTE, 0, MPI_COMM_WORLD);
 
     if (proc_id == 0) {
         // Sort the result
-        std::sort(result.begin(), result.end(), [](MutualInfo a, MutualInfo b) { return b < a; });
+        std::sort(result.begin(), result.end(), [](Position a, Position b) { return b < a; });
 
         // Write results to the output file
         std::ofstream of(out_file.c_str(), std::ios::out);
         for (unsigned int i = 0; i < num_outputs; i++) {
-            of << result[i].To_string() << '\n';
+            of << result[i].to_string() << '\n';
         }
         of.close();
     }

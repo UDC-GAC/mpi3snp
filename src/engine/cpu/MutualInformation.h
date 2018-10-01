@@ -17,29 +17,29 @@
  */
 
 /**
- * @file cpu/EntropySearch.h
+ * @file cpu/MutualInformation.h
  * @author Jorge González
  * @author Christian Ponte
- * @date 1 March 2018
+ * @date 1 October 2018
  *
- * @brief EntropySearch class declaration.
+ * @brief MutualInformation class declaration.
  */
 
-#ifndef MPI3SNP_ENTROPYSEARCH_H
-#define MPI3SNP_ENTROPYSEARCH_H
+#ifndef MPI3SNP_MUTUALINFORMATION_H
+#define MPI3SNP_MUTUALINFORMATION_H
 
 #include <cstdint>
 #include <vector>
-#include "MutualInfo.h"
+#include "Algorithm.h"
 #include "ContTable.h"
 
-class EntropySearch {
+class MutualInformation : public Algorithm<std::pair<uint32_t, uint32_t>> {
 public:
-    EntropySearch(uint32_t numSNPs, uint16_t numCases, const std::vector<std::vector<uint32_t> *> &cases,
-                  uint16_t numCtrls, const std::vector<std::vector<uint32_t> *> &ctrls);
+    MutualInformation(uint32_t numSNPs, uint16_t numCases, const std::vector<std::vector<uint32_t> *> &cases,
+                      uint16_t numCtrls, const std::vector<std::vector<uint32_t> *> &ctrls);
 
-    long mutualInfo(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, MutualInfo *mutualInfo,
-                    uint16_t numOutputs, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI);
+    long compute(const std::vector<std::pair<uint32_t, uint32_t>> &pairs, uint16_t num_outputs, Position *output)
+    override;
 
 private:
 

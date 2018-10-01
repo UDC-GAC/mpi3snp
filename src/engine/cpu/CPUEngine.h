@@ -29,6 +29,8 @@
 #define MPI3SNP_CPUENGINE_H
 
 #include "Engine.h"
+#include "Dataset.h"
+#include "Position.h"
 
 class CPUEngine : public Engine {
 public:
@@ -36,9 +38,30 @@ public:
 
     virtual ~CPUEngine() = default;
 
-    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) override;
+    void run(std::string tped, std::string tfam, std::vector<Position> &mutual_info, size_t num_outputs) override;
 
 private:
+    class Shared_block {
+    public:
+        Shared_block(int tid, Dataset &dataset, uint16_t numOutputs, Statistics &statistics) :
+                tid(tid),
+                dataset(dataset),
+                numOutputs(numOutputs),
+                positions(new Position[numOutputs]),
+                statistics(statistics) {}
+
+        ~Shared_block() {
+            delete[] positions;
+        }
+
+        const int tid;
+        Dataset &dataset;
+        std::vector<std::pair<uint32_t, uint32_t>> pairs;
+        const uint16_t numOutputs;
+        Position *positions;
+        Statistics &statistics;
+    };
+
     static void *thread(void *arg);
 
     int num_proc;

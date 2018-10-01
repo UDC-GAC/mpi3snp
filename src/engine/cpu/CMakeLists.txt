@@ -15,6 +15,6 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-add_library(engine_cpu ThreadParams.h ThreadError.h CPUEngine.cpp CPUEngine.h ContTable.h EntropySearch.cpp EntropySearch.h)
+add_library(engine_cpu ThreadError.h CPUEngine.cpp CPUEngine.h ContTable.h MutualInformation.cpp MutualInformation.h)
 target_include_directories(engine_cpu INTERFACE .)
 target_link_libraries(engine_cpu PUBLIC engine_interface PRIVATE dataset engine_distributor utils)
