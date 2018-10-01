@@ -26,9 +26,8 @@
  */
 
 #include "GPUEngine.h"
-#include "Dataset.h"
 #include "Distributor.h"
-#include "EntropySearch.h"
+#include "MutualInformation.h"
 #include <cstring>
 
 GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
@@ -64,7 +63,7 @@ GPUEngine::GPUEngine(unsigned int proc_num, unsigned int proc_id,
         throw CUDAError();
 }
 
-void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) {
+void GPUEngine::run(std::string tped, std::string tfam, std::vector<Position> &output, size_t num_outputs) {
     statistics.Begin_timer("SNPs read time");
     Dataset *dataset;
     try {
@@ -80,7 +79,7 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
 
     Distributor<uint32_t, uint2> distributor(dataset->get_SNP_count(), proc_num);
 
-    EntropySearch search(use_mi, dataset->get_SNP_count(), dataset->get_case_count(), dataset->get_ctrl_count(),
+    Algorithm<uint2> *search = new MutualInformation(use_mi, dataset->get_SNP_count(), dataset->get_case_count(), dataset->get_ctrl_count(),
                          dataset->get_cases(), dataset->get_ctrls());
 
     std::vector<uint2> pairs;
@@ -89,21 +88,16 @@ void GPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
         return p;
     }, proc_id, pairs);
 
-    long myTotalAnal = 0;
-    const unsigned int num_snps = dataset->get_SNP_count();
-    for (auto p : pairs) {
-        myTotalAnal += num_snps - p.y - 1;
-    }
-    statistics.Addl("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
-
     std::string timer_label;
     timer_label += "GPU " + std::to_string(gpu_id) + " runtime";
     statistics.Begin_timer(timer_label);
 
-    mutual_info.resize(num_outputs);
-    search.mutualInfo(pairs, num_outputs, &mutual_info.at(0));
+    output.resize(num_outputs);
+    long myTotalAnal = search->compute(pairs, num_outputs, &output.at(0));
     cudaDeviceSynchronize();
+    statistics.Addl("GPU " + std::to_string(gpu_id) + " computations", myTotalAnal);
 
+    delete search;
     delete dataset;
 
     statistics.End_timer(timer_label);

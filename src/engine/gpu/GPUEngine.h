@@ -29,13 +29,15 @@
 #define MPI3SNP_GPUENGINE_H
 
 #include "Engine.h"
+#include "Dataset.h"
+#include "Position.h"
 
 class GPUEngine : public Engine {
 public:
     GPUEngine(unsigned int proc_num, unsigned int proc_id, std::vector<std::pair<unsigned int, unsigned int>> gpu_map,
               bool use_mi, Statistics &statistics);
 
-    void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) override;
+    void run(std::string tped, std::string tfam, std::vector<Position> &mutual_info, size_t num_outputs) override;
 
 private:
     unsigned int proc_num, proc_id, gpu_id;

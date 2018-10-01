@@ -26,7 +26,7 @@
  * @brief EntropySearch class members implementation.
  */
 
-#include "EntropySearch.h"
+#include "MutualInformation.h"
 #include <float.h>
 #include <algorithm>
 
@@ -37,11 +37,14 @@ __constant__ float _invInds;
 __constant__ float _entY;
 __constant__ float _MAX_FLOAT;
 
-static __device__ uint32_t _devpopcount(uint32_t v) {
-    //uint32_t u;
-    //u = v - ((v>>1) & 033333333333) - ((v>>2) & 011111111111);
-    // return ((u + (u>>3)) & 030707070707) % 63;
-    return __popc(v);
+static __device__ uint32_t
+_devpopcount(uint32_t
+v) {
+//uint32_t u;
+//u = v - ((v>>1) & 033333333333) - ((v>>2) & 011111111111);
+// return ((u + (u>>3)) & 030707070707) % 63;
+return
+__popc(v);
 }
 
 static __global__ void _kernelDoubleTable(uint64_t numPairs, uint32_t numSNPs, uint16_t numEntriesCases,
@@ -55,10 +58,14 @@ static __global__ void _kernelDoubleTable(uint64_t numPairs, uint32_t numSNPs, u
         return;
     }
 
-    uint32_t myId1 = devIds[gid].x;
-    uint32_t myId2 = devIds[gid].y;
-    uint32_t entry1 = myId1;
-    uint32_t entry2 = myId2;
+    uint32_t
+    myId1 = devIds[gid].x;
+    uint32_t
+    myId2 = devIds[gid].y;
+    uint32_t
+    entry1 = myId1;
+    uint32_t
+    entry2 = myId2;
 
     GPUDoubleContTable *table = &doubleTables[gid];
 
@@ -97,29 +104,30 @@ static __global__ void _kernelTripleMI(uint64_t numPairs, uint32_t numSNPs,
                                        GPUDoubleContTable *devDoubleTables, uint16_t numOutputs,
                                        float *devMIValues, uint3 *devMiIds) {
 
-    extern __shared__ uint32_t sharedMem[];
-    uint32_t *cases00 = sharedMem;
-    uint32_t *cases01 = &sharedMem[numEntriesCases];
-    uint32_t *cases02 = &sharedMem[2 * numEntriesCases];
-    uint32_t *cases10 = &sharedMem[3 * numEntriesCases];
-    uint32_t *cases11 = &sharedMem[4 * numEntriesCases];
-    uint32_t *cases12 = &sharedMem[5 * numEntriesCases];
-    uint32_t *cases20 = &sharedMem[6 * numEntriesCases];
-    uint32_t *cases21 = &sharedMem[7 * numEntriesCases];
-    uint32_t *cases22 = &sharedMem[8 * numEntriesCases];
-    uint32_t *ctrls00 = &sharedMem[9 * numEntriesCases];
-    uint32_t *ctrls01 = &sharedMem[9 * numEntriesCases + numEntriesCtrls];
-    uint32_t *ctrls02 = &sharedMem[9 * numEntriesCases + 2 * numEntriesCtrls];
-    uint32_t *ctrls10 = &sharedMem[9 * numEntriesCases + 3 * numEntriesCtrls];
-    uint32_t *ctrls11 = &sharedMem[9 * numEntriesCases + 4 * numEntriesCtrls];
-    uint32_t *ctrls12 = &sharedMem[9 * numEntriesCases + 5 * numEntriesCtrls];
-    uint32_t *ctrls20 = &sharedMem[9 * numEntriesCases + 6 * numEntriesCtrls];
-    uint32_t *ctrls21 = &sharedMem[9 * numEntriesCases + 7 * numEntriesCtrls];
-    uint32_t *ctrls22 = &sharedMem[9 * numEntriesCases + 8 * numEntriesCtrls];
-    uint32_t *shMIId = &sharedMem[9 * (numEntriesCases + numEntriesCtrls)];
+    extern __shared__ uint32_t
+    sharedMem[];
+    uint32_t * cases00 = sharedMem;
+    uint32_t * cases01 = &sharedMem[numEntriesCases];
+    uint32_t * cases02 = &sharedMem[2 * numEntriesCases];
+    uint32_t * cases10 = &sharedMem[3 * numEntriesCases];
+    uint32_t * cases11 = &sharedMem[4 * numEntriesCases];
+    uint32_t * cases12 = &sharedMem[5 * numEntriesCases];
+    uint32_t * cases20 = &sharedMem[6 * numEntriesCases];
+    uint32_t * cases21 = &sharedMem[7 * numEntriesCases];
+    uint32_t * cases22 = &sharedMem[8 * numEntriesCases];
+    uint32_t * ctrls00 = &sharedMem[9 * numEntriesCases];
+    uint32_t * ctrls01 = &sharedMem[9 * numEntriesCases + numEntriesCtrls];
+    uint32_t * ctrls02 = &sharedMem[9 * numEntriesCases + 2 * numEntriesCtrls];
+    uint32_t * ctrls10 = &sharedMem[9 * numEntriesCases + 3 * numEntriesCtrls];
+    uint32_t * ctrls11 = &sharedMem[9 * numEntriesCases + 4 * numEntriesCtrls];
+    uint32_t * ctrls12 = &sharedMem[9 * numEntriesCases + 5 * numEntriesCtrls];
+    uint32_t * ctrls20 = &sharedMem[9 * numEntriesCases + 6 * numEntriesCtrls];
+    uint32_t * ctrls21 = &sharedMem[9 * numEntriesCases + 7 * numEntriesCtrls];
+    uint32_t * ctrls22 = &sharedMem[9 * numEntriesCases + 8 * numEntriesCtrls];
+    uint32_t * shMIId = &sharedMem[9 * (numEntriesCases + numEntriesCtrls)];
     float *shMIValues = (float *) &sharedMem[9 * (numEntriesCases + numEntriesCtrls) + blockDim.x * numOutputs];
 
-    uint32_t *myOutIds = &shMIId[threadIdx.x * numOutputs];
+    uint32_t * myOutIds = &shMIId[threadIdx.x * numOutputs];
     float *myOutValues = &shMIValues[threadIdx.x * numOutputs];
 
     uint16_t numEntriesWithMI = 0;
@@ -157,12 +165,17 @@ static __global__ void _kernelTripleMI(uint64_t numPairs, uint32_t numSNPs,
     uint16_t tripleCases[27];
     uint16_t tripleCtrls[27];
 
-    uint32_t myId1 = devIds[blockIdx.x].x;
-    uint32_t myId2 = devIds[blockIdx.x].y;
-    uint32_t iterId3 = myId2 + threadIdx.x + 1;
+    uint32_t
+    myId1 = devIds[blockIdx.x].x;
+    uint32_t
+    myId2 = devIds[blockIdx.x].y;
+    uint32_t
+    iterId3 = myId2 + threadIdx.x + 1;
 
-    uint32_t aux;
-    uint32_t auxSNP3Value;
+    uint32_t
+    aux;
+    uint32_t
+    auxSNP3Value;
 
     // Each thread computes several triples using the same pair
     for (; iterId3 < numSNPs; iterId3 += blockDim.x) {
@@ -426,7 +439,7 @@ static __global__ void _kernelTripleMI(uint64_t numPairs, uint32_t numSNPs,
 #endif
 
     float *remoteOutValues;
-    uint32_t *remoteOutIds;
+    uint32_t * remoteOutIds;
 
     // Perform the reduction of the lists of the block of threads
     // Each reduction obtains the numOutputs highest elements of two threads
@@ -483,29 +496,30 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
                                        GPUDoubleContTable *devDoubleTables, uint16_t numOutputs,
                                        float *devMIValues, uint3 *devMiIds) {
 
-    extern __shared__ uint32_t sharedMem[];
-    uint32_t *cases00 = sharedMem;
-    uint32_t *cases01 = &sharedMem[numEntriesCases];
-    uint32_t *cases02 = &sharedMem[2 * numEntriesCases];
-    uint32_t *cases10 = &sharedMem[3 * numEntriesCases];
-    uint32_t *cases11 = &sharedMem[4 * numEntriesCases];
-    uint32_t *cases12 = &sharedMem[5 * numEntriesCases];
-    uint32_t *cases20 = &sharedMem[6 * numEntriesCases];
-    uint32_t *cases21 = &sharedMem[7 * numEntriesCases];
-    uint32_t *cases22 = &sharedMem[8 * numEntriesCases];
-    uint32_t *ctrls00 = &sharedMem[9 * numEntriesCases];
-    uint32_t *ctrls01 = &sharedMem[9 * numEntriesCases + numEntriesCtrls];
-    uint32_t *ctrls02 = &sharedMem[9 * numEntriesCases + 2 * numEntriesCtrls];
-    uint32_t *ctrls10 = &sharedMem[9 * numEntriesCases + 3 * numEntriesCtrls];
-    uint32_t *ctrls11 = &sharedMem[9 * numEntriesCases + 4 * numEntriesCtrls];
-    uint32_t *ctrls12 = &sharedMem[9 * numEntriesCases + 5 * numEntriesCtrls];
-    uint32_t *ctrls20 = &sharedMem[9 * numEntriesCases + 6 * numEntriesCtrls];
-    uint32_t *ctrls21 = &sharedMem[9 * numEntriesCases + 7 * numEntriesCtrls];
-    uint32_t *ctrls22 = &sharedMem[9 * numEntriesCases + 8 * numEntriesCtrls];
-    uint32_t *shMIId = &sharedMem[9 * (numEntriesCases + numEntriesCtrls)];
+    extern __shared__ uint32_t
+    sharedMem[];
+    uint32_t * cases00 = sharedMem;
+    uint32_t * cases01 = &sharedMem[numEntriesCases];
+    uint32_t * cases02 = &sharedMem[2 * numEntriesCases];
+    uint32_t * cases10 = &sharedMem[3 * numEntriesCases];
+    uint32_t * cases11 = &sharedMem[4 * numEntriesCases];
+    uint32_t * cases12 = &sharedMem[5 * numEntriesCases];
+    uint32_t * cases20 = &sharedMem[6 * numEntriesCases];
+    uint32_t * cases21 = &sharedMem[7 * numEntriesCases];
+    uint32_t * cases22 = &sharedMem[8 * numEntriesCases];
+    uint32_t * ctrls00 = &sharedMem[9 * numEntriesCases];
+    uint32_t * ctrls01 = &sharedMem[9 * numEntriesCases + numEntriesCtrls];
+    uint32_t * ctrls02 = &sharedMem[9 * numEntriesCases + 2 * numEntriesCtrls];
+    uint32_t * ctrls10 = &sharedMem[9 * numEntriesCases + 3 * numEntriesCtrls];
+    uint32_t * ctrls11 = &sharedMem[9 * numEntriesCases + 4 * numEntriesCtrls];
+    uint32_t * ctrls12 = &sharedMem[9 * numEntriesCases + 5 * numEntriesCtrls];
+    uint32_t * ctrls20 = &sharedMem[9 * numEntriesCases + 6 * numEntriesCtrls];
+    uint32_t * ctrls21 = &sharedMem[9 * numEntriesCases + 7 * numEntriesCtrls];
+    uint32_t * ctrls22 = &sharedMem[9 * numEntriesCases + 8 * numEntriesCtrls];
+    uint32_t * shMIId = &sharedMem[9 * (numEntriesCases + numEntriesCtrls)];
     float *shMIValues = (float *) &sharedMem[9 * (numEntriesCases + numEntriesCtrls) + blockDim.x * numOutputs];
 
-    uint32_t *myOutIds = &shMIId[threadIdx.x * numOutputs];
+    uint32_t * myOutIds = &shMIId[threadIdx.x * numOutputs];
     float *myOutValues = &shMIValues[threadIdx.x * numOutputs];
 
     uint16_t numEntriesWithMI = 0;
@@ -543,12 +557,17 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
     uint16_t tripleCases[27];
     uint16_t tripleCtrls[27];
 
-    uint32_t myId1 = devIds[blockIdx.x].x;
-    uint32_t myId2 = devIds[blockIdx.x].y;
-    uint32_t iterId3 = myId2 + threadIdx.x + 1;
+    uint32_t
+    myId1 = devIds[blockIdx.x].x;
+    uint32_t
+    myId2 = devIds[blockIdx.x].y;
+    uint32_t
+    iterId3 = myId2 + threadIdx.x + 1;
 
-    uint32_t aux;
-    uint32_t auxSNP3Value;
+    uint32_t
+    aux;
+    uint32_t
+    auxSNP3Value;
 
     // Each thread computes several triples using the same pair
     for (; iterId3 < numSNPs; iterId3 += blockDim.x) {
@@ -2031,7 +2050,7 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
 #endif
 
     float *remoteOutValues;
-    uint32_t *remoteOutIds;
+    uint32_t * remoteOutIds;
 
     // Perform the reduction of the lists of the block of threads
     // Each reduction obtains the numOutputs highest elements of two threads
@@ -2081,8 +2100,9 @@ static __global__ void _kernelTripleIG(uint64_t numPairs, uint32_t numSNPs,
     }
 }
 
-EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
-                             std::vector<std::vector<uint32_t> *> cases, std::vector<std::vector<uint32_t> *> ctrls) :
+MutualInformation::MutualInformation(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
+                                     std::vector<std::vector<uint32_t> *> cases,
+                                     std::vector<std::vector<uint32_t> *> ctrls) :
         _isMI(isMI),
         _numSNPs(numSNPs),
         _numEntriesCase(numCases / 32 + ((numCases % 32) > 0)),
@@ -2151,7 +2171,7 @@ EntropySearch::EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uin
         throw CUDAError();
 }
 
-EntropySearch::~EntropySearch() {
+MutualInformation::~MutualInformation() {
     if (cudaSuccess != cudaFree(_dev0Cases))
         throw CUDAError();
     if (cudaSuccess != cudaFree(_dev1Cases))
@@ -2166,8 +2186,7 @@ EntropySearch::~EntropySearch() {
         throw CUDAError();
 }
 
-void EntropySearch::mutualInfo(const std::vector<uint2> &pairs, size_t num_outputs,
-                               MutualInfo *mutualInfo) {
+long MutualInformation::compute(const std::vector<uint2> &pairs, uint16_t num_outputs, Position *output) {
     constexpr size_t block_size = 5000;
 
     if (cudaSuccess != cudaMalloc(&_devIds, block_size * sizeof(uint2)))
@@ -2212,7 +2231,8 @@ void EntropySearch::mutualInfo(const std::vector<uint2> &pairs, size_t num_outpu
         if (cudaSuccess != cudaMemcpy(_devIds, &pairs.at(0) + i, num_pairs * sizeof(uint2), cudaMemcpyHostToDevice))
             throw CUDAError();
 
-        uint32_t nblocks = (num_pairs + NUM_TH_PER_BLOCK - 1) / NUM_TH_PER_BLOCK;
+        uint32_t
+        nblocks = (num_pairs + NUM_TH_PER_BLOCK - 1) / NUM_TH_PER_BLOCK;
         dim3 gridDouble(nblocks, 1);
         dim3 blocksDouble(NUM_TH_PER_BLOCK, 1);
 
@@ -2227,7 +2247,8 @@ void EntropySearch::mutualInfo(const std::vector<uint2> &pairs, size_t num_outpu
         // The necessary shared memory is to store the double contingency table of the matrix
         dim3 gridMI(num_pairs, 1);
         dim3 blockMI(NUM_TH_PER_BLOCK, 1);
-        uint32_t sharedSize = 9 * (_numEntriesCase + _numEntriesCtrl) * sizeof(uint32_t);
+        uint32_t
+        sharedSize = 9 * (_numEntriesCase + _numEntriesCtrl) * sizeof(uint32_t);
         sharedSize += num_outputs * NUM_TH_PER_BLOCK * (sizeof(float) + sizeof(uint32_t));
 
         if (_isMI) {
@@ -2250,7 +2271,7 @@ void EntropySearch::mutualInfo(const std::vector<uint2> &pairs, size_t num_outpu
             throw CUDAError();
 
         _findNHighestMI(_hostMiIds, _hostMIValues, num_pairs * num_outputs, minMI, minMIPos, numEntriesWithMI,
-                        num_outputs, mutualInfo);
+                        num_outputs, output);
     }
 
     if (cudaSuccess != cudaFree(_devMIValues))
@@ -2268,24 +2289,30 @@ void EntropySearch::mutualInfo(const std::vector<uint2> &pairs, size_t num_outpu
     delete[] _tables;
     delete[] _hostMIValues;
     delete[] _hostMiIds;
+
+    long myTotalAnal = 0;
+    for (auto p : pairs) {
+        myTotalAnal += _numSNPs - p.y - 1;
+    }
+    return myTotalAnal;
 }
 
-void EntropySearch::_findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI,
-                                    uint16_t &minMIPos, uint16_t &numEntriesWithMI,
-                                    size_t num_outputs, MutualInfo *mutualInfo) {
+void MutualInformation::_findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI,
+                                        uint16_t &minMIPos, uint16_t &numEntriesWithMI,
+                                        size_t num_outputs, Position *output) {
     int iter = 0;
-    MutualInfo *auxMI;
+    Position *auxMI;
     float auxValue;
 
     if (numEntriesWithMI == 0) { // The first values are directly stored
         for (iter = 0; iter < num_outputs; iter++) {
             auxValue = _hostMIValues[iter];
 
-            auxMI = &mutualInfo[iter];
-            auxMI->_mutualInfoValue = auxValue;
-            auxMI->_id1 = _hostMiIds[iter].x;
-            auxMI->_id2 = _hostMiIds[iter].y;
-            auxMI->_id3 = _hostMiIds[iter].z;
+            auxMI = &output[iter];
+            auxMI->rank = auxValue;
+            auxMI->p1 = _hostMiIds[iter].x;
+            auxMI->p2 = _hostMiIds[iter].y;
+            auxMI->p3 = _hostMiIds[iter].z;
 
             if (auxValue < minMI) {
                 minMI = auxValue;
@@ -2299,18 +2326,18 @@ void EntropySearch::_findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uin
         auxValue = _hostMIValues[iter];
 
         if (auxValue > minMI) { // The value must be inserted
-            auxMI = &mutualInfo[minMIPos];
-            auxMI->_id1 = _hostMiIds[iter].x;
-            auxMI->_id2 = _hostMiIds[iter].y;
-            auxMI->_id3 = _hostMiIds[iter].z;
-            auxMI->_mutualInfoValue = auxValue;
+            auxMI = &output[minMIPos];
+            auxMI->p1 = _hostMiIds[iter].x;
+            auxMI->p2 = _hostMiIds[iter].y;
+            auxMI->p3 = _hostMiIds[iter].z;
+            auxMI->rank = auxValue;
 
             // Find the new minimum
-            auxMI = std::min_element(mutualInfo, mutualInfo + num_outputs);
-            minMI = auxMI->_mutualInfoValue;
+            auxMI = std::min_element(output, output + num_outputs);
+            minMI = auxMI->rank;
             uint16_t i = 0;
             while (1) {
-                if (mutualInfo[i]._mutualInfoValue == minMI) {
+                if (output[i].rank == minMI) {
                     break;
                 }
                 i++;

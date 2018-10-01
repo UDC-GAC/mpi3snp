@@ -29,18 +29,18 @@
 #ifndef MPI3SNP_ENTROPYSEARCH_H
 #define MPI3SNP_ENTROPYSEARCH_H
 
-#include "MutualInfo.h"
 #include "GPUContTable.h"
 #include <vector>
+#include "Algorithm.h"
 
-class EntropySearch {
+class MutualInformation : public Algorithm<uint2> {
 public:
-    EntropySearch(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
+    ~MutualInformation();
+
+    MutualInformation(bool isMI, uint32_t numSNPs, uint16_t numCases, uint16_t numCtrls,
                   std::vector<std::vector<uint32_t> *> cases, std::vector<std::vector<uint32_t> *> ctrls);
 
-    ~EntropySearch();
-
-    void mutualInfo(const std::vector<uint2> &pairs, size_t num_outputs, MutualInfo *mutualInfo);
+    long compute(const std::vector<uint2> &workload, uint16_t num_outputs, Position *output) override;
 
 private:
     bool _isMI;
@@ -58,7 +58,7 @@ private:
     uint2 *_devIds;
 
     void _findNHighestMI(uint3 *_hostMiIds, float *_hostMIValues, uint64_t totalValues, float &minMI, uint16_t &minMIPos, uint16_t &numEntriesWithMI,
-                         size_t num_outputs, MutualInfo *mutualInfo);
+                         size_t num_outputs, Position *output);
 };
 
 
