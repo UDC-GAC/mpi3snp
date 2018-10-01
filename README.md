@@ -24,8 +24,8 @@ Optional:
 
 CMake is the project build manager. CMake should be able to determine installed compilers and libraries. If this is
 is not the case, please refer to your CMake version's documentation. By default, CMake will check for a CUDA
-installation and set the target architecture accordingly. This behaviour can be manually controlled by switching the
-CMake variable `TARGET_GPU_ARCH` on or off. 
+installation and set the target architecture accordingly. This behaviour can be manually controlled by setting the
+`TARGET_ARCH` CMake variable to `CPU` or `GPU`. 
 
 Building the sources looks like this:
 
