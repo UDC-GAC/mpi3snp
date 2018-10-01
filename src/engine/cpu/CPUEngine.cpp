@@ -63,7 +63,7 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
                               proc_id * num_threads + tid, params[tid]->pairs);
 
         // Create thread entities that call to the functions below
-        if (pthread_create(&threadIDs[tid], nullptr, threadMI, params[tid]) != 0) {
+        if (pthread_create(&threadIDs[tid], nullptr, thread, params[tid]) != 0) {
             for (int i = 0; i < tid; i++)
                 pthread_cancel(threadIDs[i]);
             throw ThreadError("Error creating thread number " + std::to_string(tid));
@@ -87,7 +87,7 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<MutualInfo> 
     memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (num_threads - 1), sizeof(MutualInfo) * num_outputs);
 }
 
-void *CPUEngine::threadMI(void *arg) {
+void *CPUEngine::thread(void *arg) {
     // Enable thread cancellation
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr);

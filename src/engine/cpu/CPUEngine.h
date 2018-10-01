@@ -39,7 +39,7 @@ public:
     void run(std::string tped, std::string tfam, std::vector<MutualInfo> &mutual_info, size_t num_outputs) override;
 
 private:
-    static void *threadMI(void *arg);
+    static void *thread(void *arg);
 
     int num_proc;
     int proc_id;
