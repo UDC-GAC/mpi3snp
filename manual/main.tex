@@ -78,19 +78,18 @@
 % ===================
 %    Title Section     
 % ===================
-
-    \rule{13cm}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal rule
-    \rule{13cm}{0.4pt} % Thin horizontal rule
+    \rule{13cm}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick rule
+    \rule{13cm}{0.4pt} % Thin rule
     
-        \vspace{0.75\baselineskip} % Whitespace above the title
+    \vspace{0.75\baselineskip} % Whitespace above the title
 % ========== Title ===============    
     {    \Huge MPI3SNP \\    }
 % ======================================
-        \vspace{0.75\baselineskip} % Whitespace below the title
-    \rule{13cm}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal rule
-    \rule{13cm}{1.6pt} % Thick horizontal rule
+    \vspace{0.75\baselineskip} % Whitespace below the title
+    \rule{13cm}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin rule
+    \rule{13cm}{1.6pt} % Thick rule
     
-        \vspace{1.75\baselineskip} % Whitespace after the title block
+    \vspace{1.75\baselineskip} % Whitespace after the title block
 % =================
 %    Information    
 % =================
@@ -119,7 +118,11 @@
     bottom=15mm}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{What is MPI3SNP?}
-    MPI3SNP is a parallel software tool dedicated to genome-wide association studies, performing a third-order exhaustive search. It is targeted to cluster architectures, and mitigates the cubic time complexity inherent to third-order searches by exploiting the several layers of parallelism present in a supercomputer. CPU and GPU implementations are offered.
+    MPI3SNP is a parallel software tool dedicated to genome-wide association 
+    studies, performing a third-order exhaustive search. It is targeted to 
+    cluster architectures, and mitigates the cubic time complexity inherent to 
+    third-order searches by exploiting the several layers of parallelism 
+    present in a supercomputer. CPU and GPU implementations are offered.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Building}
     Support is currently limited to linux distributions only.
@@ -133,10 +136,15 @@
         \end{itemize}
         
     \subsection{Compilation}
-        CMake is the project build manager. CMake should be able to determine installed compilers and libraries. If this is is not the case, please refer to your CMake version's documentation. By default, CMake will check for a CUDA installation and set the target architecture accordingly. This behaviour can be manually controlled by setting the \texttt{TARGET\_ARCH} CMake variable to \texttt{CPU} or \texttt{GPU}.
+        CMake is the project build manager. CMake should be able to determine 
+        installed compilers and libraries. If this is is not the case, please 
+        refer to your CMake version's documentation. By default, CMake will 
+        check for a CUDA installation and set the target architecture 
+        accordingly. This behaviour can be manually controlled by setting the 
+        \linebreak \texttt{TARGET\_ARCH} CMake variable to \texttt{CPU} or 
+        \texttt{GPU}.
 
         Building the sources looks like this:
-
         \begin{verbatim}
             cd MPI3SNP/project/path
             mkdir build
@@ -147,33 +155,41 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
 \section{Usage}
-    MPI3SNP takes two files as the input, using the PLINK/TPED format, and writes the results to a third file. All file paths are provided to the program as positional arguments as follows:
+    MPI3SNP takes two files as the input, using the PLINK/TPED format, and 
+    writes the results to a third file. All file paths are provided to the 
+    program as positional arguments as follows:
     
     \begin{verbatim}
         ./MPI3SNP <path/to/tped> <path/to/tfam> <path/to/output>
     \end{verbatim}
 
-    Additional configuration options (specific to either CPU or GPU implementation) are available to the user, and can be consulted using the \texttt{-h} flag.
+    Additional configuration options (specific to either CPU or GPU 
+    implementation) are available to the user, and can be consulted using the 
+    \texttt{-h} flag.
 
     \subsection{Sample files}
-
-    Sample files can be found on MPI3SNP's wiki \cite{wiki}. These are a syntetic dataset used for performance evaluation, which describe the input file format and can be used for verification/evaluation purposes.
+        Sample files can be found on MPI3SNP's wiki \cite{wiki}. These are a 
+        syntetic dataset used for performance evaluation, which describe the 
+        input file format and can be used for verification/evaluation purposes.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Troubleshooting}
-    Support is currently limited to linux distributions only. If you are having trouble building/using the application, please submit a new issue to get help.
+    Support is currently limited to linux distributions only. If you are having 
+    trouble building/using the application, please submit a new issue to get 
+    help.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{License}
-    This software is licensed under the GPU GPLv3 license. Check the license file \cite{license} for details.
-\newpage
+    This software is licensed under the GPU GPLv3 license. Check the license 
+    file \cite{license} for details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    \begin{thebibliography}{2}
-        \bibitem{wiki}
-            Sample files from MPI3SNP's wiki.\\
-            \url{https://github.com/chponte/mpi3snp/wiki/Sample-files}
-        \bibitem{license}
-            License file included with MPI3SNP.\\
-            \url{https://github.com/chponte/mpi3snp/blob/master/LICENSE.md}
-    \end{thebibliography}
+\newpage
+\begin{thebibliography}{2}
+    \bibitem{wiki}
+        Sample files from MPI3SNP's wiki.\\
+        \url{https://github.com/chponte/mpi3snp/wiki/Sample-files}
+    \bibitem{license}
+        License file included with MPI3SNP.\\
+        \url{https://github.com/chponte/mpi3snp/blob/master/LICENSE.md}
+\end{thebibliography}
 \addtocounter{section}{1}
 \addcontentsline{toc}{section}{\protect\numberline{\thesection}References}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
