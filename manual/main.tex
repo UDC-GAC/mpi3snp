@@ -1,0 +1,180 @@
+% ==== Document Class & Packages =====
+\documentclass[12pt,hidelinks]{article}
+\usepackage[many]{tcolorbox}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[english]{babel}
+\usepackage{fancyhdr}
+\usepackage{fourier}% change to lmodern if fourier is no available
+\usepackage{fancyref}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{listings}
+\usepackage{varwidth}
+\usepackage{geometry}
+\tcbuselibrary{documentation}
+\geometry{
+    a4paper,
+    left=33mm,
+    right=33mm,
+    top=20mm
+}
+
+% ========= Path to images ============
+%   - Direct the computer on the path 
+%       to the folder containg the images
+% =====================================
+\graphicspath{{./images/}}
+% ============= Macros ================
+\newcommand{\fillin}{\underline{\hspace{.75in}}{\;}}
+\setlength{\parindent}{0pt}
+\addto{\captionsenglish}{\renewcommand*{\contentsname}{Table of Contents}}
+\linespread{1.2}
+% ======== Footers & Headers ==========
+\cfoot{\thepage}
+\chead{}\rhead{}\lhead{}
+% =====================================
+\renewcommand{\thesection}{\arabic{section}}
+\newcommand\sectionnumfont{% font specification for the number
+    \fontsize{380}{130}\color{myblueii}\selectfont}
+\newcommand\sectionnamefont{% font specification for the name "PART"
+    \normalfont\color{white}\scshape\small\bfseries }
+% ============= Colors ================
+% ----- Red -----
+\definecolor{mordantred19}{rgb}{0.68, 0.05, 0.0}
+% ----- Blue -----
+\definecolor{st.patrick\'sblue}{rgb}{0.14, 0.16, 0.48}
+\definecolor{teal}{rgb}{0.0, 0.5, 0.5}
+\definecolor{beaublue}{rgb}{0.74, 0.83, 0.9}
+\definecolor{mybluei}{RGB}{0,173,239}
+\definecolor{myblueii}{RGB}{63,200,244}
+\definecolor{myblueiii}{RGB}{199,234,253}
+% ---- Yellow ----
+\definecolor{blond}{rgb}{0.98, 0.94, 0.75}
+\definecolor{cream}{rgb}{1.0, 0.99, 0.82}
+% ----- Green ------
+\definecolor{emerald}{rgb}{0.31, 0.78, 0.47}
+\definecolor{darkspringgreen}{rgb}{0.09, 0.45, 0.27}
+% ---- White -----
+\definecolor{ghostwhite}{rgb}{0.97, 0.97, 1.0}
+\definecolor{splashedwhite}{rgb}{1.0, 0.99, 1.0}
+% ---- Grey -----
+\definecolor{whitesmoke}{rgb}{0.96, 0.96, 0.96}
+\definecolor{lightgray}{rgb}{0.92, 0.92, 0.92}
+\definecolor{floralwhite}{rgb}{1.0, 0.98, 0.94}
+% ========= Hyper Ref ===========
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+\begin{document}
+\begin{titlepage}
+    \centering % Center everything on the title page
+    \scshape % Use small caps for all text on the title page
+    \vspace*{1.5\baselineskip} % White space at the top of the page
+% ===================
+%    Title Section     
+% ===================
+
+    \rule{13cm}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal rule
+    \rule{13cm}{0.4pt} % Thin horizontal rule
+    
+        \vspace{0.75\baselineskip} % Whitespace above the title
+% ========== Title ===============    
+    {    \Huge MPI3SNP \\    }
+% ======================================
+        \vspace{0.75\baselineskip} % Whitespace below the title
+    \rule{13cm}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal rule
+    \rule{13cm}{1.6pt} % Thick horizontal rule
+    
+        \vspace{1.75\baselineskip} % Whitespace after the title block
+% =================
+%    Information    
+% =================
+    {\large 
+        Christian Ponte-Fernández \\ \vspace{1mm}
+        Jorge González-Domínguez \\ \vspace{2.5mm}
+        María J. Martín
+    } \\
+    \vfill
+    \includegraphics[width=.35\textwidth]{logo} \\
+    \vspace{1mm}
+    Contact: \url{christian.ponte@udc.es}\\ 
+\end{titlepage}
+\clearpage
+\thispagestyle{empty}
+\mbox{}
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{page}{1}
+\tableofcontents
+\newpage
+\newgeometry{
+    left=29mm, 
+    right=29mm, 
+    top=20mm, 
+    bottom=15mm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{What is MPI3SNP?}
+    MPI3SNP is a parallel software tool dedicated to genome-wide association studies, performing a third-order exhaustive search. It is targeted to cluster architectures, and mitigates the cubic time complexity inherent to third-order searches by exploiting the several layers of parallelism present in a supercomputer. CPU and GPU implementations are offered.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Building}
+    Support is currently limited to linux distributions only.
+
+    \subsection{Requirements}
+        \begin{itemize}
+            \item CMake (>3.0 version).
+            \item A C++14 compatible compiler.
+            \item MPI library.
+            \item CUDA (optional).
+        \end{itemize}
+        
+    \subsection{Compilation}
+        CMake is the project build manager. CMake should be able to determine installed compilers and libraries. If this is is not the case, please refer to your CMake version's documentation. By default, CMake will check for a CUDA installation and set the target architecture accordingly. This behaviour can be manually controlled by setting the \texttt{TARGET\_ARCH} CMake variable to \texttt{CPU} or \texttt{GPU}.
+
+        Building the sources looks like this:
+
+        \begin{verbatim}
+            cd MPI3SNP/project/path
+            mkdir build
+            cd build/
+            cmake ..
+            make -j4
+        \end{verbatim}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Usage}
+    MPI3SNP takes two files as the input, using the PLINK/TPED format, and writes the results to a third file. All file paths are provided to the program as positional arguments as follows:
+    
+    \begin{verbatim}
+        ./MPI3SNP <path/to/tped> <path/to/tfam> <path/to/output>
+    \end{verbatim}
+
+    Additional configuration options (specific to either CPU or GPU implementation) are available to the user, and can be consulted using the \texttt{-h} flag.
+
+    \subsection{Sample files}
+
+    Sample files can be found on MPI3SNP's wiki \cite{wiki}. These are a syntetic dataset used for performance evaluation, which describe the input file format and can be used for verification/evaluation purposes.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Troubleshooting}
+    Support is currently limited to linux distributions only. If you are having trouble building/using the application, please submit a new issue to get help.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{License}
+    This software is licensed under the GPU GPLv3 license. Check the license file \cite{license} for details.
+\newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \begin{thebibliography}{2}
+        \bibitem{wiki}
+            Sample files from MPI3SNP's wiki.\\
+            \url{https://github.com/chponte/mpi3snp/wiki/Sample-files}
+        \bibitem{license}
+            License file included with MPI3SNP.\\
+            \url{https://github.com/chponte/mpi3snp/blob/master/LICENSE.md}
+    \end{thebibliography}
+\addtocounter{section}{1}
+\addcontentsline{toc}{section}{\protect\numberline{\thesection}References}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
