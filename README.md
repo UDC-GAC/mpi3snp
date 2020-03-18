@@ -1,5 +1,10 @@
 # MPI3SNP
 
+<p>
+    <a href="https://doi.org/10.1177/1094342019852128" alt="Publication">
+    <img src="https://img.shields.io/badge/DOI-10.1177%2F1094342019852128-blue"/></a>
+</p>
+
 ## What is MPI3SNP?
 
 MPI3SNP is a parallel software tool dedicated to genome-wide association studies, performing a third-order exhaustive
