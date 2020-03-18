@@ -20,7 +20,7 @@
 /**
  * @file cpu/CPUEngine.h
  * @author Christian Ponte
- * @date 1 March 2018
+ * @date 18 March 2020
  *
  * @brief CPUEngine class declaration, implementing the abstract class Engine.
  */
@@ -62,7 +62,7 @@ private:
         Statistics &statistics;
     };
 
-    static void *thread(void *arg);
+    static void thread(CPUEngine::Shared_block *params);
 
     int num_proc;
     int proc_id;

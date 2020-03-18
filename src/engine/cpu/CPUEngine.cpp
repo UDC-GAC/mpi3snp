@@ -20,7 +20,7 @@
 /**
  * @file cpu/CPUEngine.cpp
  * @author Christian Ponte
- * @date 1 March 2018
+ * @date 18 March 2020
  *
  * @brief CPUEngine class members implementation.
  */
@@ -29,6 +29,7 @@
 #include "MutualInformation.h"
 #include "ThreadError.h"
 #include "Distributor.h"
+#include <thread>
 
 CPUEngine::CPUEngine(int num_proc, int proc_id, int num_threads, bool use_mi, Statistics &statistics) :
         num_proc(num_proc),
@@ -52,47 +53,41 @@ void CPUEngine::run(std::string tped, std::string tfam, std::vector<Position> &m
     statistics.Addi("Number of cases", dataset->get_case_count());
     statistics.Addi("Number of controls", dataset->get_ctrl_count());
 
-    std::vector<pthread_t> threadIDs(num_threads, 0);
-
-    // Computation of the single-SNP entropy
-    std::vector<Shared_block *> params(num_threads);
+    std::vector<std::thread *> threads;
+    std::vector<Shared_block *> params;
+    
+    // Create thread entities that call to the functions below
     for (int tid = 0; tid < num_threads; tid++) {
-        params[tid] = new Shared_block(tid, *dataset, num_outputs, statistics);
-        distributor.get_pairs([](uint32_t first, uint32_t second) { return std::make_pair(first, second); },
-                              proc_id * num_threads + tid, params[tid]->pairs);
-
-        // Create thread entities that call to the functions below
-        if (pthread_create(&threadIDs[tid], nullptr, thread, params[tid]) != 0) {
-            for (int i = 0; i < tid; i++)
-                pthread_cancel(threadIDs[i]);
-            throw ThreadError("Error creating thread number " + std::to_string(tid));
-        }
+        params.push_back(new Shared_block( tid, *dataset, num_outputs, statistics));
+        distributor.get_pairs(
+            [](uint32_t first, uint32_t second) {
+                return std::make_pair(first, second); 
+            },
+            proc_id * num_threads + tid,
+            params.back()->pairs
+        );
+        threads.push_back(new std::thread(CPUEngine::thread, params.back()));
     }
 
-    Position auxMutualInfo[num_threads * num_outputs];
+    std::vector<Position> auxMutualInfo(num_threads * num_outputs);
 
     // Wait for the completion of all threads
-    for (int tid = 0; tid < num_threads; tid++) {
-        pthread_join(threadIDs[tid], nullptr);
-        memcpy(&auxMutualInfo[tid * num_outputs], params[tid]->positions, num_outputs * sizeof(Position));
-        delete params[tid];
+    for (auto i = 0; i < threads.size(); i++) {
+        threads[i]->join();
+        delete threads[i];
+        memcpy(&auxMutualInfo[i * num_outputs], params[i]->positions, num_outputs * sizeof(Position));
+        delete params[i];
     }
 
     delete dataset;
 
     // Sort the auxiliar array and print the results
-    std::sort(auxMutualInfo, auxMutualInfo + num_outputs * num_threads);
+    std::sort(auxMutualInfo.begin(), auxMutualInfo.end());
     mutual_info.resize(num_outputs);
-    memcpy(&mutual_info[0], auxMutualInfo + num_outputs * (num_threads - 1), sizeof(Position) * num_outputs);
+    memcpy(&mutual_info[0], &auxMutualInfo[num_outputs * (num_threads - 1)], sizeof(Position) * num_outputs);
 }
 
-void *CPUEngine::thread(void *arg) {
-    // Enable thread cancellation
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, nullptr);
-
-    Shared_block *params = (Shared_block *) arg;
-
+void CPUEngine::thread(CPUEngine::Shared_block *params) {
     Algorithm<std::pair<uint32_t, uint32_t>> *search = new MutualInformation(
             params->dataset.get_SNP_count(), params->dataset.get_case_count(), params->dataset.get_cases(),
             params->dataset.get_ctrl_count(), params->dataset.get_ctrls());
